@@ -10,7 +10,7 @@ import { scanBarcodeAction } from '@/app/actions';
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { ScanResult, ScanError } from '@/app/actions';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ScannerViewProps {
@@ -29,6 +29,7 @@ export function ScannerView({ onScanSuccess }: ScannerViewProps) {
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   const typedState = state as ScanResult | ScanError | undefined;
 
@@ -48,19 +49,22 @@ export function ScannerView({ onScanSuccess }: ScannerViewProps) {
   }, [typedState, onScanSuccess, toast]);
 
   useEffect(() => {
-    if (scanMode === 'camera') {
-      const codeReader = new BrowserMultiFormatReader();
-      const getCameraPermission = async () => {
+    const codeReader = new BrowserMultiFormatReader();
+    let stream: MediaStream | null = null;
+    
+    const startCamera = async () => {
+      if (scanMode === 'camera' && videoRef.current) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
           setHasCameraPermission(true);
 
           if (videoRef.current) {
-            codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+            const controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
               if (result) {
                 setDetectedBarcode(result.getText());
               }
             });
+            controlsRef.current = controls;
           }
         } catch (error) {
           console.error('Error accessing camera:', error);
@@ -71,14 +75,20 @@ export function ScannerView({ onScanSuccess }: ScannerViewProps) {
             description: 'Please enable camera permissions in your browser settings to use this feature.',
           });
         }
-      };
+      }
+    };
 
-      getCameraPermission();
+    startCamera();
 
-      return () => {
-        codeReader.reset();
-      };
-    }
+    return () => {
+      if (controlsRef.current) {
+        controlsRef.current.stop();
+        controlsRef.current = null;
+      }
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [scanMode, toast]);
 
   useEffect(() => {
