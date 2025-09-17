@@ -13,13 +13,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface IngredientScannerViewProps {
   onScanSuccess: (result: ScanResult) => void;
-  barcode: string | null;
   onReset: () => void;
+  barcode?: string | null;
 }
 
 const initialState = undefined;
 
-export function IngredientScannerView({ onScanSuccess, barcode, onReset }: IngredientScannerViewProps) {
+export function IngredientScannerView({ onScanSuccess, onReset, barcode }: IngredientScannerViewProps) {
   const [state, formAction] = useActionState(scanIngredientsAction, initialState);
   const { toast } = useToast();
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export function IngredientScannerView({ onScanSuccess, barcode, onReset }: Ingre
       <form action={formAction} ref={formRef}>
         <CardHeader className="text-center">
           <CardTitle className="font-headline text-2xl">Scan Ingredients</CardTitle>
-          <CardDescription>Product not found. Please take or upload a photo of the ingredient list.</CardDescription>
+          <CardDescription>Take or upload a photo of the ingredient list.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative flex justify-center items-center aspect-video w-full rounded-lg bg-secondary/30 overflow-hidden border-2 border-dashed border-primary/30 p-4">
@@ -164,7 +164,7 @@ export function IngredientScannerView({ onScanSuccess, barcode, onReset }: Ingre
         <CardFooter className="flex-col gap-2">
             <SubmitButton photoDataUri={photoDataUri} />
             <Button onClick={onReset} variant="ghost" className="w-full">
-                <RotateCcw className="mr-2" /> Start Over
+                <RotateCcw className="mr-2" /> Back to Selection
             </Button>
         </CardFooter>
       </form>

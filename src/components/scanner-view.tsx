@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Barcode, ScanLine, Camera, Text } from 'lucide-react';
+import { Barcode, ScanLine, Camera, Text, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +15,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ScannerViewProps {
   onScanResponse: (result: ScanResult | ScanError) => void;
+  onReset: () => void;
 }
 
 const initialState = undefined;
 
 type ScanMode = 'file' | 'camera';
 
-export function ScannerView({ onScanResponse }: ScannerViewProps) {
+export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const [state, formAction] = useActionState(scanBarcodeAction, initialState);
   const { toast } = useToast();
   const [scanMode, setScanMode] = useState<ScanMode>('file');
@@ -41,9 +42,7 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
               title: typedState.error,
               description: typedState.message,
             });
-            if (typedState.error !== 'Product Not Found') {
-              setDetectedBarcode(null); // Reset barcode on error unless it's a "not found" error
-            }
+            setDetectedBarcode(null); // Reset barcode on error
         }
         onScanResponse(typedState);
     }
@@ -114,7 +113,7 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
     <Card className="overflow-hidden shadow-lg">
       <form action={formAction} ref={formRef}>
         <CardHeader className="text-center">
-          <CardTitle className="font-headline text-2xl">Ready to Scan</CardTitle>
+          <CardTitle className="font-headline text-2xl">Scan Barcode</CardTitle>
           <CardDescription>
             {scanMode === 'file'
               ? 'Enter a product barcode below to check its Halal status.'
@@ -166,8 +165,11 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
            {/* Hidden input to carry the barcode value for both modes */}
            <Input type="hidden" name="barcode" value={detectedBarcode || ''} />
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex-col gap-2">
           <SubmitButton scanMode={scanMode} />
+          <Button onClick={onReset} variant="ghost" className="w-full">
+                <RotateCcw className="mr-2" /> Back to Selection
+            </Button>
         </CardFooter>
       </form>
     </Card>

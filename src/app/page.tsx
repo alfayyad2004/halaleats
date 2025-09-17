@@ -6,20 +6,20 @@ import { ScannerView } from '@/components/scanner-view';
 import { ResultsView } from '@/components/results-view';
 import { IngredientScannerView } from '@/components/ingredient-scanner-view';
 import type { ScanResult, ScanError } from '@/app/actions';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Barcode, Image } from 'lucide-react';
 
-export type PageState = 'scanning_barcode' | 'scanning_ingredients' | 'showing_results';
+export type PageState = 'selection' | 'scanning_barcode' | 'scanning_ingredients' | 'showing_results';
 
 export default function Home() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [pageState, setPageState] = useState<PageState>('scanning_barcode');
-  const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+  const [pageState, setPageState] = useState<PageState>('selection');
 
   const handleScanResponse = (result: ScanResult | ScanError) => {
     if ('error' in result) {
-      if (result.error === 'Product Not Found' && 'barcode' in result && typeof result.barcode === 'string') {
-        setLastBarcode(result.barcode);
-        setPageState('scanning_ingredients');
-      }
+      // Error is handled by the component via toast
+      return;
     } else {
       setScanResult(result);
       setPageState('showing_results');
@@ -33,20 +33,35 @@ export default function Home() {
 
   const handleReset = () => {
     setScanResult(null);
-    setLastBarcode(null);
-    setPageState('scanning_barcode');
+    setPageState('selection');
   };
-
+  
   const renderContent = () => {
     switch (pageState) {
+      case 'selection':
+        return (
+          <Card className="shadow-lg">
+            <CardHeader className="text-center">
+              <CardTitle className="font-headline text-2xl">Choose Scan Mode</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <Button size="lg" onClick={() => setPageState('scanning_barcode')}>
+                <Barcode className="mr-2" /> Scan Barcode
+              </Button>
+              <Button size="lg" onClick={() => setPageState('scanning_ingredients')}>
+                <Image className="mr-2" /> Scan Ingredients
+              </Button>
+            </CardContent>
+          </Card>
+        );
       case 'scanning_barcode':
-        return <ScannerView onScanResponse={handleScanResponse} />;
+        return <ScannerView onScanResponse={handleScanResponse} onReset={handleReset} />;
       case 'scanning_ingredients':
-        return <IngredientScannerView onScanSuccess={handleIngredientScanSuccess} barcode={lastBarcode} onReset={handleReset} />;
+        return <IngredientScannerView onScanSuccess={handleIngredientScanSuccess} onReset={handleReset} />;
       case 'showing_results':
         return <ResultsView result={scanResult!} onReset={handleReset} />;
       default:
-        return <ScannerView onScanResponse={handleScanResponse} />;
+        return <ScannerView onScanResponse={handleScanResponse} onReset={handleReset} />;
     }
   }
 
