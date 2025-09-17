@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, use } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Barcode, ScanLine, Camera, Text } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,14 +14,14 @@ import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ScannerViewProps {
-  onScanSuccess: (result: ScanResult) => void;
+  onScanResponse: (result: ScanResult | ScanError) => void;
 }
 
 const initialState = undefined;
 
 type ScanMode = 'file' | 'camera';
 
-export function ScannerView({ onScanSuccess }: ScannerViewProps) {
+export function ScannerView({ onScanResponse }: ScannerViewProps) {
   const [state, formAction] = useActionState(scanBarcodeAction, initialState);
   const { toast } = useToast();
   const [scanMode, setScanMode] = useState<ScanMode>('file');
@@ -35,18 +35,19 @@ export function ScannerView({ onScanSuccess }: ScannerViewProps) {
 
   useEffect(() => {
     if (typedState) {
-      if ('error' in typedState) {
-        toast({
-          variant: 'destructive',
-          title: typedState.error,
-          description: typedState.message,
-        });
-        setDetectedBarcode(null); // Reset barcode on error
-      } else {
-        onScanSuccess(typedState);
-      }
+        if ('error' in typedState) {
+            toast({
+              variant: 'destructive',
+              title: typedState.error,
+              description: typedState.message,
+            });
+            if (typedState.error !== 'Product Not Found') {
+              setDetectedBarcode(null); // Reset barcode on error unless it's a "not found" error
+            }
+        }
+        onScanResponse(typedState);
     }
-  }, [typedState, onScanSuccess, toast]);
+  }, [typedState, onScanResponse, toast]);
 
   useEffect(() => {
     const codeReader = new BrowserMultiFormatReader();
