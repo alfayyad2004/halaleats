@@ -10,6 +10,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { nonHalalIngredients } from '@/lib/halal-data';
 import {z} from 'genkit';
 
 const CheckHalalStatusInputSchema = z.object({
@@ -26,10 +27,6 @@ export type CheckHalalStatusOutput = z.infer<typeof CheckHalalStatusOutputSchema
 export async function checkHalalStatus(input: CheckHalalStatusInput): Promise<CheckHalalStatusOutput> {
   return checkHalalStatusFlow(input);
 }
-
-const nonHalalIngredients = [
-    'alcohol', 'gelatin', 'pork', 'lard', 'carmine', 'shellac'
-];
 
 const prompt = ai.definePrompt({
   name: 'checkHalalStatusPrompt',
