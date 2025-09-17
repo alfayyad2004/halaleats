@@ -21,11 +21,13 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground font-body flex flex-col">
       <AppHeader />
       <main className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8">
-        {!scanResult ? (
-          <ScannerView onScanSuccess={handleScanSuccess} />
-        ) : (
-          <ResultsView result={scanResult} onReset={handleReset} />
-        )}
+        <div className="w-full max-w-md">
+            {!scanResult ? (
+              <ScannerView onScanSuccess={handleScanSuccess} />
+            ) : (
+              <ResultsView result={scanResult} onReset={handleReset} />
+            )}
+        </div>
       </main>
     </div>
   );
