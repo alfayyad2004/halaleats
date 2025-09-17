@@ -61,7 +61,7 @@ export async function scanBarcodeAction(
       };
     }
 
-    const halalStatus = await checkHalalStatus({ ingredients });
+    const halalStatus = await checkHalalStatus({ ingredients, brand: productName });
 
     return {
       productName,
@@ -98,8 +98,12 @@ export async function scanIngredientsAction(
 
   try {
     const { ingredients } = await extractIngredientsFromImage({ photoDataUri });
-    const halalStatus = await checkHalalStatus({ ingredients });
     const productName = barcode ? await getProductName(barcode) : 'Scanned Product';
+    const halalStatus = await checkHalalStatus({ 
+        ingredients, 
+        brand: productName !== 'Product not found.' ? productName : undefined 
+    });
+    
 
     return {
       productName: productName !== 'Product not found.' ? productName : 'Scanned Product',
