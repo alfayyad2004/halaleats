@@ -32,6 +32,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { pending } = useFormStatus();
 
   const typedState = state as ScanResult | ScanError | undefined;
 
@@ -194,7 +195,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
            <Input type="hidden" name="barcode" value={detectedBarcode || ''} />
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          <SubmitButton scanMode={scanMode} isScanning={isScanning} />
+          <SubmitButton scanMode={scanMode} isScanning={isScanning || pending} />
           <Button onClick={() => { stopCamera(); onReset(); }} variant="ghost" className="w-full">
                 <RotateCcw className="mr-2" /> Back to Selection
             </Button>
@@ -209,10 +210,11 @@ function SubmitButton({ scanMode, isScanning }: { scanMode: ScanMode, isScanning
   const isDisabled = pending || isScanning;
 
   if (scanMode === 'camera') {
+    // This button is not visible, but its status is used to disable the manual button
     return (
-      <Button type="submit" className="w-full" size="lg" disabled={isDisabled} style={{ display: 'none' }}>
-        {pending ? 'Checking...' : 'Check Product'}
-      </Button>
+        <Button type="submit" className="w-full" size="lg" disabled={isDisabled} style={{ display: 'none' }}>
+            {pending ? 'Checking...' : 'Check Product'}
+        </Button>
     );
   }
   return (
