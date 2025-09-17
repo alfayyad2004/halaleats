@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Barcode, ScanLine, Camera, Text } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,7 @@ const initialState = undefined;
 type ScanMode = 'file' | 'camera';
 
 export function ScannerView({ onScanSuccess }: ScannerViewProps) {
-  const [state, formAction] = useFormState(scanBarcodeAction, initialState);
+  const [state, formAction] = useActionState(scanBarcodeAction, initialState);
   const { toast } = useToast();
   const [scanMode, setScanMode] = useState<ScanMode>('file');
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -44,7 +45,7 @@ export function ScannerView({ onScanSuccess }: ScannerViewProps) {
         onScanSuccess(typedState);
       }
     }
-  }, [state, onScanSuccess, toast]);
+  }, [typedState, onScanSuccess, toast]);
 
   useEffect(() => {
     if (scanMode === 'camera') {
