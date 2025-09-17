@@ -23,6 +23,7 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
   const [state, formAction] = useActionState(scanIngredientsAction, initialState);
   const { toast } = useToast();
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,6 +66,7 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
 
   const handleUseCamera = () => {
     setPhotoDataUri(null); // Clear previous photo
+    setIsCameraActive(true);
     getCameraPermission();
   };
   
@@ -79,6 +81,7 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUri = canvas.toDataURL('image/jpeg');
         setPhotoDataUri(dataUri);
+        setIsCameraActive(false); // Turn off camera view
       }
       if (video.srcObject) {
         (video.srcObject as MediaStream).getTracks().forEach(track => track.stop());
@@ -92,8 +95,20 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
       const reader = new FileReader();
       reader.onload = (e) => {
         setPhotoDataUri(e.target?.result as string);
+        setIsCameraActive(false);
       };
       reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleBack = () => {
+    if (isCameraActive) {
+      setIsCameraActive(false);
+      if (videoRef.current?.srcObject) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+      }
+    } else {
+      onReset();
     }
   };
 
@@ -115,7 +130,7 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
           <div className="relative flex justify-center items-center aspect-video w-full rounded-lg bg-secondary/30 overflow-hidden border-2 border-dashed border-primary/30 p-4">
             {photoDataUri ? (
               <img src={photoDataUri} alt="Ingredient list preview" className="w-full h-full object-contain" />
-            ) : hasCameraPermission && videoRef.current ? (
+            ) : isCameraActive ? (
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
             ) : (
               <Image className="w-24 h-24 text-primary/20" />
@@ -138,7 +153,7 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
           <input type="hidden" name="photoDataUri" value={photoDataUri || ''} />
           <input type="hidden" name="barcode" value={barcode || ''} />
 
-          {hasCameraPermission && videoRef.current?.srcObject ? (
+          {isCameraActive ? (
               <Button type="button" className="w-full" onClick={takePicture}>
                   <Camera className="mr-2" /> Take Picture
               </Button>
@@ -163,8 +178,8 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
         </CardContent>
         <CardFooter className="flex-col gap-2">
             <SubmitButton photoDataUri={photoDataUri} />
-            <Button onClick={onReset} variant="ghost" className="w-full">
-                <RotateCcw className="mr-2" /> Back to Selection
+            <Button onClick={handleBack} variant="ghost" className="w-full">
+                <RotateCcw className="mr-2" /> {isCameraActive ? 'Back to Options' : 'Back to Selection'}
             </Button>
         </CardFooter>
       </form>
