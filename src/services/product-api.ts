@@ -1,4 +1,6 @@
-// A mock API to simulate fetching product data.
+// src/services/product-api.ts
+
+// A mock API to simulate fetching product data for development and testing.
 const MOCK_PRODUCTS: { [barcode: string]: { name: string, ingredients: string } } = {
   '8992761134010': { // Indomie Mi Goreng
     name: 'Indomie Mi Goreng',
@@ -9,27 +11,63 @@ const MOCK_PRODUCTS: { [barcode: string]: { name: string, ingredients: string } 
     ingredients: 'Carbonated Water, High Fructose Corn Syrup, Caramel Color, Phosphoric Acid, Natural Flavors, Caffeine.',
   },
   '7891000055013': { // Product with haram ingredient
-    name: 'Gummy Bears',
-    ingredients: 'Glucose Syrup, Sugar, Water, Gelatin, Citric Acid, Artificial Flavors, Carnauba Wax, Carmine (for color).',
+    name: 'Gummy Bears (Mock)',
+    ingredients: 'Glucose Syrup, Sugar, Water, Gelatin (Pork), Citric Acid, Artificial Flavors, Carnauba Wax, Carmine (for color).',
   },
   '03077109': { // Another product with haram ingredient
-    name: 'Fancy Liqueur Chocolates',
+    name: 'Fancy Liqueur Chocolates (Mock)',
     ingredients: 'Sugar, Cocoa Mass, Cocoa Butter, Invert Sugar Syrup, Alcohol, Soy Lecithin, Natural Vanilla Flavor.',
+  },
+  '5000159459578': { // Nutella
+    name: 'Nutella',
+    ingredients: 'Sugar, Palm Oil, Hazelnuts (13%), Skimmed Milk Powder (8.7%), Fat-Reduced Cocoa (7.4%), Emulsifier: Lecithins (Soya), Vanillin.'
   }
 };
 
+async function fetchProductFromOpenFoodFacts(barcode: string): Promise<{ name: string, ingredients: string } | null> {
+    try {
+        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        if (!response.ok) {
+            return null;
+        }
+        const data = await response.json();
+        if (data.status === 1 && data.product) {
+            const productName = data.product.product_name || 'Product name not found.';
+            const ingredients = data.product.ingredients_text || 'Ingredients not found for this product.';
+            return { name: productName, ingredients };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching from Open Food Facts API:', error);
+        return null;
+    }
+}
+
+
 export async function getProductIngredients(barcode: string): Promise<string> {
-  const product = MOCK_PRODUCTS[barcode];
-  if (product) {
-    return product.ingredients;
+  const onlineProduct = await fetchProductFromOpenFoodFacts(barcode);
+  if (onlineProduct) {
+    return onlineProduct.ingredients;
   }
+
+  const mockProduct = MOCK_PRODUCTS[barcode];
+  if (mockProduct) {
+    return mockProduct.ingredients;
+  }
+  
   return 'Ingredients not found for this product.';
 }
 
 export async function getProductName(barcode: string): Promise<string> {
-    const product = MOCK_PRODUCTS[barcode];
-    if (product) {
-        return product.name;
+    const onlineProduct = await fetchProductFromOpenFoodFacts(barcode);
+    if (onlineProduct) {
+        return onlineProduct.name;
     }
+
+    const mockProduct = MOCK_PRODUCTS[barcode];
+    if (mockProduct) {
+        return mockProduct.name;
+    }
+
     return 'Product not found.';
 }
