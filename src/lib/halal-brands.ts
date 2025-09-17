@@ -8,5 +8,7 @@ export const knownHalalBrands: string[] = [
     'Crescent Foods',
     'Midamar',
     'Nema',
-    'Al Safa Foods'
+    'Al Safa Foods',
+    'Samyang',
+    'Buldak'
 ];
