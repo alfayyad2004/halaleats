@@ -129,13 +129,10 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
-      const barcodeInput = formRef.current.elements.namedItem('barcode') as HTMLInputElement;
-      if (barcodeInput) {
-        barcodeInput.value = detectedBarcode;
-      }
-      if (formRef.current) {
-          formRef.current.requestSubmit();
-      }
+      // The hidden input's `value` is already bound to `detectedBarcode`.
+      // We just need to submit the form.
+      // A small delay ensures React has updated the input value in the DOM.
+      setTimeout(() => formRef.current?.requestSubmit(), 100);
     }
   }, [detectedBarcode]);
 
