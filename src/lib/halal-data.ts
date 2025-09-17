@@ -1,5 +1,33 @@
 // src/lib/halal-data.ts
 
 export const nonHalalIngredients: string[] = [
-    'alcohol', 'gelatin', 'pork', 'lard', 'carmine', 'shellac'
+    'Alcohol',
+    'Animal Fat (if from non-halal source)',
+    'Bacon',
+    'Beer',
+    'Brandy',
+    'Carmine (Cochineal/E120)',
+    'Cognac',
+    'Collagen (if from non-halal source)',
+    'Cysteine (if from human hair or pork)',
+    'Ethanol',
+    'Ethyl Alcohol',
+    'Gelatin (if from pork or non-halal source)',
+    'Gin',
+    'Ham',
+    'Lard',
+    'Liqueur',
+    'Meat (unless specified as halal)',
+    'Pepsin (if from pork)',
+    'Pork',
+    'Rennet (if from non-halal source)',
+    'Rum',
+    'Sausage (if contains pork or non-halal meat)',
+    'Shellac (E904)',
+    'Tallow (if from non-halal source)',
+    'Vanilla Extract (if contains alcohol)',
+    'Vodka',
+    'Whey (if prepared with non-halal rennet)',
+    'Whiskey',
+    'Wine'
 ];
