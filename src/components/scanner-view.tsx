@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, use } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Barcode, ScanLine, Camera, Text } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,12 +56,16 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
     const startCamera = async () => {
       if (scanMode === 'camera' && videoRef.current) {
         try {
+          // Stop any existing camera streams
+          if (controlsRef.current) {
+            controlsRef.current.stop();
+          }
           stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
           setHasCameraPermission(true);
 
           if (videoRef.current) {
             const controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
-              if (result) {
+              if (result && !detectedBarcode) { // Only set if not already processing a barcode
                 setDetectedBarcode(result.getText());
               }
             });
@@ -90,14 +94,17 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [scanMode, toast]);
+  }, [scanMode, toast, detectedBarcode]);
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
       const barcodeInput = formRef.current.elements.namedItem('barcode') as HTMLInputElement;
       if (barcodeInput) {
         barcodeInput.value = detectedBarcode;
-        formRef.current.requestSubmit();
+      }
+      // Automatically submit the form
+      if (formRef.current) {
+          formRef.current.requestSubmit();
       }
     }
   }, [detectedBarcode]);
@@ -119,6 +126,7 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
             {scanMode === 'camera' ? (
               <>
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                <ScanLine className="absolute w-full h-1 text-primary/50 animate-pulse" style={{ animationDuration: '3s' }}/>
                 {hasCameraPermission === false && (
                     <Alert variant="destructive" className="absolute">
                         <AlertTitle>Camera Access Required</AlertTitle>
@@ -137,10 +145,10 @@ export function ScannerView({ onScanResponse }: ScannerViewProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant={scanMode === 'file' ? 'default' : 'outline'} onClick={() => setScanMode('file')}>
+              <Button type="button" variant={scanMode === 'file' ? 'default' : 'outline'} onClick={() => { setScanMode('file'); setDetectedBarcode(null); }}>
                   <Text className="mr-2" /> Manual
               </Button>
-              <Button type="button" variant={scanMode === 'camera' ? 'default' : 'outline'} onClick={() => setScanMode('camera')}>
+              <Button type="button" variant={scanMode === 'camera' ? 'default' : 'outline'} onClick={() => { setScanMode('camera'); setDetectedBarcode(null); }}>
                   <Camera className="mr-2" /> Camera
               </Button>
           </div>
