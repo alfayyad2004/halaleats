@@ -23,36 +23,8 @@ const FetchIngredientListOutputSchema = z.object({
 export type FetchIngredientListOutput = z.infer<typeof FetchIngredientListOutputSchema>;
 
 export async function fetchIngredientList(input: FetchIngredientListInput): Promise<FetchIngredientListOutput> {
-  return fetchIngredientListFlow(input);
+  const ingredients = await getProductIngredients(input.barcode);
+  return {
+    ingredients,
+  };
 }
-
-const fetchIngredientListPrompt = ai.definePrompt({
-  name: 'fetchIngredientListPrompt',
-  input: {schema: FetchIngredientListInputSchema},
-  output: {schema: FetchIngredientListOutputSchema},
-  prompt: `You are a helpful assistant that retrieves the ingredient list for a product given its barcode.
-
-  The barcode is: {{{barcode}}}
-
-  Return the ingredient list.
-  `,
-});
-
-const fetchIngredientListFlow = ai.defineFlow(
-  {
-    name: 'fetchIngredientListFlow',
-    inputSchema: FetchIngredientListInputSchema,
-    outputSchema: FetchIngredientListOutputSchema,
-  },
-  async input => {
-    const ingredients = await getProductIngredients(input.barcode);
-    const {output} = await fetchIngredientListPrompt({
-      barcode: input.barcode,
-      ingredients: ingredients,
-    });
-
-    return {
-      ingredients: ingredients,
-    };
-  }
-);
