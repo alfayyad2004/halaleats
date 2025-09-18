@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useFormStatus } from 'react-dom';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Barcode, ScanLine, Camera, Text, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,7 @@ const initialState = undefined;
 type ScanMode = 'file' | 'camera';
 
 export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
-  const [state, formAction] = useActionState(scanBarcodeAction, initialState);
+  const [state, formAction] = useFormState(scanBarcodeAction, initialState);
   const { toast } = useToast();
   const [scanMode, setScanMode] = useState<ScanMode>('file');
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -31,7 +31,6 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const codeReader = useRef(new BrowserMultiFormatReader());
-  const { pending } = useFormStatus();
 
   const typedState = state as ScanResult | ScanError | undefined;
 
@@ -47,8 +46,9 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             if(scanMode === 'camera') {
                 startCamera();
             }
+        } else {
+            onScanResponse(typedState);
         }
-        onScanResponse(typedState);
     }
   }, [typedState, onScanResponse, toast]);
 
@@ -104,7 +104,11 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
-      setTimeout(() => formRef.current?.requestSubmit(), 100);
+        const barcodeInput = formRef.current.elements.namedItem('barcode') as HTMLInputElement;
+        if (barcodeInput) {
+            barcodeInput.value = detectedBarcode;
+            setTimeout(() => formRef.current?.requestSubmit(), 100);
+        }
     }
   }, [detectedBarcode]);
 
@@ -152,20 +156,20 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
               </Button>
           </div>
 
-          {scanMode === 'file' && (
+          {scanMode === 'file' ? (
             <Input
               name="barcode"
               placeholder="e.g., 8992761134010"
               className="text-center text-lg h-12"
               aria-label="Barcode Input"
               required
-              defaultValue={detectedBarcode || ''}
             />
+          ) : (
+             <Input type="hidden" name="barcode" defaultValue={detectedBarcode || ''} />
           )}
-           <Input type="hidden" name="barcode" value={detectedBarcode || ''} />
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          <SubmitButton scanMode={scanMode} isScanning={isScanning || pending} />
+          <SubmitButton scanMode={scanMode} isScanning={isScanning} />
           <Button onClick={() => { stopCamera(); onReset(); }} variant="ghost" className="w-full">
                 <RotateCcw className="mr-2" /> Back to Selection
             </Button>
@@ -181,8 +185,8 @@ function SubmitButton({ scanMode, isScanning }: { scanMode: ScanMode, isScanning
 
   if (scanMode === 'camera') {
     return (
-        <Button type="submit" className="w-full" size="lg" disabled={isDisabled} style={{ display: 'none' }}>
-            {pending ? 'Checking...' : 'Check Product'}
+        <Button type="submit" className="w-full" size="lg" disabled={isDisabled} style={{ display: pending || isScanning ? 'inline-flex' : 'none' }}>
+            {pending || isScanning ? 'Scanning...' : 'Check Product'}
         </Button>
     );
   }

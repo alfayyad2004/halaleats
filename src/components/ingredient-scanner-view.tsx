@@ -1,7 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useFormState, useFormStatus } from 'react-dom';
 import { Camera, Image, Upload, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,7 @@ interface IngredientScannerViewProps {
 const initialState = undefined;
 
 export function IngredientScannerView({ onScanSuccess, onReset, barcode }: IngredientScannerViewProps) {
-  const [state, formAction] = useActionState(scanIngredientsAction, initialState);
+  const [state, formAction] = useFormState(scanIngredientsAction, initialState);
   const { toast } = useToast();
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -135,7 +134,7 @@ export function IngredientScannerView({ onScanSuccess, onReset, barcode }: Ingre
             ) : (
               <Image className="w-24 h-24 text-primary/20" />
             )}
-            {hasCameraPermission === false && (
+            {isCameraActive && hasCameraPermission === false && (
                 <Alert variant="destructive" className="absolute">
                     <AlertTitle>Camera Access Denied</AlertTitle>
                     <AlertDescription>Please allow camera access.</AlertDescription>
