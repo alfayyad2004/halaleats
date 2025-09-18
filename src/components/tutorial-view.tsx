@@ -43,7 +43,7 @@ export function TutorialView({ onFinish }: TutorialViewProps) {
 
   return (
     <Dialog open={true} onOpenChange={(isOpen) => { if (!isOpen) onFinish(); }}>
-        <DialogContent className="p-0 border-0" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="p-0 border-0 max-w-sm">
             <Carousel className="w-full">
             <CarouselContent>
                 {tutorialSteps.map((step, index) => (
