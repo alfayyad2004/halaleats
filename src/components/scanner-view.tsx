@@ -1,12 +1,12 @@
 'use client';
 
-import { useActionState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Barcode, ScanLine, Camera, Text, RotateCcw, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { scanBarcodeAction } from '@/app/actions';
-import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { ScanResult, ScanError } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -50,7 +50,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             onScanResponse(typedState);
         }
     }
-  }, [typedState, onScanResponse, toast]);
+  }, [typedState, onScanResponse, toast, scanMode]);
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
