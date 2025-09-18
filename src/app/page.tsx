@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { AppHeader } from '@/components/app-header';
 import { ScannerView } from '@/components/scanner-view';
 import { ResultsView } from '@/components/results-view';
@@ -10,6 +9,7 @@ import type { ScanResult, ScanError } from '@/app/actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Barcode, ScanText } from 'lucide-react';
+import { HalalEatsLogo } from '@/components/halal-eats-logo';
 
 export type PageState = 'selection' | 'scanning_barcode' | 'scanning_ingredients' | 'showing_results';
 
@@ -42,14 +42,8 @@ export default function Home() {
       case 'selection':
         return (
           <Card className="shadow-lg overflow-hidden">
-            <div className="relative aspect-video w-full">
-              <Image 
-                src="https://picsum.photos/seed/groceries/600/400"
-                alt="Shopping for food"
-                fill
-                className="object-cover"
-                data-ai-hint="grocery shopping"
-              />
+            <div className="relative aspect-video w-full flex items-center justify-center bg-primary/5 p-4">
+              <HalalEatsLogo className="w-full h-full" />
             </div>
             <CardHeader className="text-center">
               <CardTitle className="font-headline text-3xl">Welcome to HalalEats</CardTitle>
