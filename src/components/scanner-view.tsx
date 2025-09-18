@@ -10,7 +10,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { ScanResult, ScanError } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 interface ScannerViewProps {
   onScanResponse: (result: ScanResult | ScanError) => void;
@@ -67,7 +67,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             setDetectedBarcode(result.getText());
             stopCamera();
           }
-          if (err && !(err instanceof NotFoundException)) {
+          if (err && !(err.name === 'NotFoundException')) {
             console.error(err);
             toast({
               variant: 'destructive',
