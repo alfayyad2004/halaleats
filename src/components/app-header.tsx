@@ -16,7 +16,7 @@ export function AppHeader() {
       <div className="flex items-center gap-3">
         <ScanBarcode className="w-8 h-8 text-primary" />
         <h1 className="text-2xl font-headline font-bold text-foreground">
-          Halal Scanner
+          HalalEats
         </h1>
       </div>
       <Dialog>

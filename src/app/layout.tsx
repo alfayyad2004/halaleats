@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Halal Scanner',
-  description: 'Scan barcodes to check if a product is Halal.',
+  title: 'HalalEats',
+  description: 'Scan barcodes and ingredients to check if a product is Halal.',
 };
 
 export default function RootLayout({
