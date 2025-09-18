@@ -54,16 +54,15 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   }, [typedState, onScanResponse, toast]);
 
   const stopCamera = () => {
-    try {
-        codeReaderRef.current.reset();
-    } catch (e) {
-        console.error("Failed to reset code reader:", e);
-    }
-    
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
+    }
+    try {
+      codeReaderRef.current.reset();
+    } catch (e) {
+      // It's fine if reset fails, the tracks are stopped.
     }
     setIsScanning(false);
   };
