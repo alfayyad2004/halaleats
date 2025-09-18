@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Camera, Image, Upload, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,7 @@ interface IngredientScannerViewProps {
 const initialState = undefined;
 
 export function IngredientScannerView({ onScanSuccess, onReset, barcode }: IngredientScannerViewProps) {
-  const [state, formAction] = useFormState(scanIngredientsAction, initialState);
+  const [state, formAction] = useActionState(scanIngredientsAction, initialState);
   const { toast } = useToast();
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);

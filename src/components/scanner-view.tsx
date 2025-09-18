@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Barcode, ScanLine, Camera, Text, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ const initialState = undefined;
 type ScanMode = 'file' | 'camera';
 
 export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
-  const [state, formAction] = useFormState(scanBarcodeAction, initialState);
+  const [state, formAction] = useActionState(scanBarcodeAction, initialState);
   const { toast } = useToast();
   const [scanMode, setScanMode] = useState<ScanMode>('file');
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -71,7 +72,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             console.error(err);
             toast({
               variant: 'destructive',
-              title: 'Scan Error',
+              title: 'ScanError',
               description: 'Could not decode barcode from video stream.',
             });
             stopCamera();
@@ -129,7 +130,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             {scanMode === 'camera' ? (
               <>
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                <ScanLine className="absolute w-full h-1 text-primary/50 animate-pulse" style={{ animationDuration: '3s' }}/>
+                {isScanning && <ScanLine className="absolute w-full h-1 text-primary/50 animate-pulse" style={{ animationDuration: '3s' }}/>}
                 {hasCameraPermission === false && (
                     <Alert variant="destructive" className="absolute">
                         <AlertTitle>Camera Access Required</AlertTitle>
@@ -141,7 +142,6 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
               </>
             ) : (
                 <>
-                    <ScanLine className="absolute w-full h-1 text-primary/50 animate-pulse" style={{ animationDuration: '3s' }}/>
                     <Barcode className="w-24 h-24 text-primary/20"/>
                 </>
             )}
@@ -185,14 +185,14 @@ function SubmitButton({ scanMode, isScanning }: { scanMode: ScanMode, isScanning
 
   if (scanMode === 'camera') {
     return (
-        <Button type="submit" className="w-full" size="lg" disabled={isDisabled} style={{ display: pending || isScanning ? 'inline-flex' : 'none' }}>
-            {pending || isScanning ? 'Scanning...' : 'Check Product'}
+        <Button type="submit" className="w-full" size="lg" disabled={!pending} style={{ display: pending ? 'inline-flex' : 'none' }}>
+            {pending ? 'Scanning...' : 'Check Product'}
         </Button>
     );
   }
   return (
     <Button type="submit" className="w-full" size="lg" disabled={isDisabled}>
-      {isDisabled ? 'Scanning...' : 'Check Product'}
+      {pending ? 'Scanning...' : 'Check Product'}
     </Button>
   );
 }
