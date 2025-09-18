@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ScannerView } from '@/components/scanner-view';
 import { ResultsView } from '@/components/results-view';
@@ -10,12 +10,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Barcode, ScanText } from 'lucide-react';
 import { HalalEatsLogo } from '@/components/halal-eats-logo';
+import { TutorialView } from '@/components/tutorial-view';
 
 export type PageState = 'selection' | 'scanning_barcode' | 'scanning_ingredients' | 'showing_results';
 
 export default function Home() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [pageState, setPageState] = useState<PageState>('selection');
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    const tutorialSeen = localStorage.getItem('halalEatsTutorialSeen');
+    if (!tutorialSeen) {
+      setShowTutorial(true);
+    }
+  }, []);
+
+  const handleTutorialFinish = () => {
+    localStorage.setItem('halalEatsTutorialSeen', 'true');
+    setShowTutorial(false);
+  };
 
   const handleScanResponse = (result: ScanResult | ScanError) => {
     if ('error' in result) {
@@ -38,6 +52,10 @@ export default function Home() {
   };
   
   const renderContent = () => {
+    if (showTutorial) {
+      return <TutorialView onFinish={handleTutorialFinish} />;
+    }
+
     switch (pageState) {
       case 'selection':
         return (
