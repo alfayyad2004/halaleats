@@ -1,8 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { Camera, Image, Upload, AlertCircle, RotateCcw } from 'lucide-react';
+import { useActionState, useFormStatus } from 'react';
+import { Camera, Image, Upload, AlertCircle, RotateCcw, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { scanIngredientsAction } from '@/app/actions';
@@ -192,7 +191,12 @@ function SubmitButton({ photoDataUri }: { photoDataUri: string | null }) {
 
   return (
     <Button type="submit" className="w-full" size="lg" disabled={pending || !photoDataUri}>
-      {pending ? 'Analyzing...' : 'Check Ingredients'}
+      {pending ? (
+        <>
+          <Loader className="mr-2 animate-spin" />
+          Analyzing...
+        </>
+      ) : 'Check Ingredients'}
     </Button>
   );
 }
