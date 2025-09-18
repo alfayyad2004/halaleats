@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { AppHeader } from '@/components/app-header';
 import { ScannerView } from '@/components/scanner-view';
 import { ResultsView } from '@/components/results-view';
 import { IngredientScannerView } from '@/components/ingredient-scanner-view';
 import type { ScanResult, ScanError } from '@/app/actions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Barcode, Image } from 'lucide-react';
+import { Barcode, ScanText } from 'lucide-react';
 
 export type PageState = 'selection' | 'scanning_barcode' | 'scanning_ingredients' | 'showing_results';
 
@@ -40,16 +41,31 @@ export default function Home() {
     switch (pageState) {
       case 'selection':
         return (
-          <Card className="shadow-lg">
+          <Card className="shadow-lg overflow-hidden">
+            <div className="relative aspect-video w-full">
+              <Image 
+                src="https://picsum.photos/seed/groceries/600/400"
+                alt="Shopping for food"
+                fill
+                className="object-cover"
+                data-ai-hint="grocery shopping"
+              />
+            </div>
             <CardHeader className="text-center">
-              <CardTitle className="font-headline text-2xl">Choose Scan Mode</CardTitle>
+              <CardTitle className="font-headline text-3xl">Welcome to HalalEats</CardTitle>
+              <CardDescription className="text-base">
+                Your guide to making conscious, Halal food choices.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
+              <p className="text-center text-muted-foreground px-4">
+                Scan a product's barcode or take a picture of its ingredients to check its Halal status instantly.
+              </p>
               <Button size="lg" onClick={() => setPageState('scanning_barcode')}>
                 <Barcode className="mr-2" /> Scan Barcode
               </Button>
-              <Button size="lg" onClick={() => setPageState('scanning_ingredients')}>
-                <Image className="mr-2" /> Scan Ingredients
+              <Button size="lg" variant="outline" onClick={() => setPageState('scanning_ingredients')}>
+                <ScanText className="mr-2" /> Scan Ingredients
               </Button>
             </CardContent>
           </Card>
