@@ -43,7 +43,7 @@ export default function Home() {
         return (
           <Card className="shadow-lg overflow-hidden">
             <div className="relative aspect-video w-full flex items-center justify-center bg-primary/5 p-4">
-              <HalalEatsLogo className="w-full h-full" />
+              <HalalEatsLogo className="w-48 h-auto" />
             </div>
             <CardHeader className="text-center">
               <CardTitle className="font-headline text-3xl">Welcome to HalalEats</CardTitle>
