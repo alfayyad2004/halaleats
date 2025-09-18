@@ -1,8 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { Barcode, ScanLine, Camera, Text, RotateCcw } from 'lucide-react';
+import { useActionState, useFormStatus } from 'react-dom';
+import { Barcode, ScanLine, Camera, Text, RotateCcw, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,9 +59,9 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
       videoRef.current.srcObject = null;
     }
     try {
-      codeReaderRef.current.reset();
+        codeReaderRef.current.reset();
     } catch (e) {
-      // It's fine if reset fails, the tracks are stopped.
+        // It's fine if reset fails, the tracks are stopped.
     }
     setIsScanning(false);
   };
@@ -195,13 +194,23 @@ function SubmitButton({ scanMode, isScanning }: { scanMode: ScanMode, isScanning
   if (scanMode === 'camera') {
     return (
         <Button type="submit" className="w-full" size="lg" disabled={!pending} style={{ display: pending ? 'inline-flex' : 'none' }}>
-            {pending ? 'Scanning...' : 'Check Product'}
+            {pending ? (
+                <>
+                    <Loader className="mr-2 animate-spin" />
+                    Scanning...
+                </>
+            ) : 'Check Product'}
         </Button>
     );
   }
   return (
     <Button type="submit" className="w-full" size="lg" disabled={isDisabled}>
-      {pending ? 'Scanning...' : 'Check Product'}
+      {pending ? (
+        <>
+            <Loader className="mr-2 animate-spin" />
+            Scanning...
+        </>
+      ) : 'Check Product'}
     </Button>
   );
 }
