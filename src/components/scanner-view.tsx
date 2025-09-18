@@ -31,7 +31,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const [isScanning, setIsScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const codeReader = useRef(new BrowserMultiFormatReader());
+  const codeReaderRef = useRef<BrowserMultiFormatReader>(new BrowserMultiFormatReader());
 
   const typedState = state as ScanResult | ScanError | undefined;
 
@@ -54,7 +54,17 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   }, [typedState, onScanResponse, toast]);
 
   const stopCamera = () => {
-    codeReader.current.reset();
+    try {
+        codeReaderRef.current.reset();
+    } catch (e) {
+        console.error("Failed to reset code reader:", e);
+    }
+    
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
     setIsScanning(false);
   };
   
@@ -63,7 +73,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
       try {
         setHasCameraPermission(true);
         setIsScanning(true);
-        await codeReader.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+        await codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
           if (result) {
             setDetectedBarcode(result.getText());
             stopCamera();
@@ -72,7 +82,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             console.error(err);
             toast({
               variant: 'destructive',
-              title: 'ScanError',
+              title: 'Scan Error',
               description: 'Could not decode barcode from video stream.',
             });
             stopCamera();
