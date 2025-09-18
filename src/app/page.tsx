@@ -83,6 +83,19 @@ export default function Home() {
             {renderContent()}
         </div>
       </main>
+      <footer className="w-full bg-secondary/50 text-secondary-foreground p-6 text-center text-xs">
+          <div className="max-w-3xl mx-auto space-y-2 text-muted-foreground">
+              <p>
+                  As-salamu alaykum. I am Fayyad Amir Gosein, the developer of HalalEats. My goal is to help you make quick, confident choices at the shelf. The app checks ingredients from trusted sources and applies clear rules to label items as Halal, Haram, Doubtful, or Unknown, along with the reasons. This is a tool for guidance, not a fatwa. When in doubt, please consult your local scholars.
+              </p>
+              <p>
+                  If a product is missing or incorrect, tap “Report a correction.” Jazakallah khair for helping us build better local coverage.
+              </p>
+              <p>
+                  Contact: <a href="mailto:alfayyadgos@gmail.com" className="text-primary underline">alfayyadgos@gmail.com</a>
+              </p>
+          </div>
+      </footer>
     </div>
   );
 }
