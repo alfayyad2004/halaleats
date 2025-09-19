@@ -28,6 +28,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isErrorActive, setIsErrorActive] = useState(false); // New state to track error
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader>(new BrowserMultiFormatReader());
@@ -56,9 +57,10 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
               title: typedState.error,
               description: typedState.message,
             });
-            setDetectedBarcode(null); // Clear the detected barcode to allow a new scan
+            setIsErrorActive(true); // Set error state to true
+            setDetectedBarcode(null); // Clear the detected barcode
             if(scanMode === 'camera') {
-                stopCamera(); // Stop the camera to prevent immediate rescan
+                stopCamera(); // Stop the camera
             }
         } else {
             onScanResponse(typedState);
@@ -68,6 +70,9 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   
   const startCamera = async () => {
+    // Do not start if an error is active or already scanning
+    if (isErrorActive || isScanning) return; 
+
     if (scanMode === 'camera' && videoRef.current && !detectedBarcode) {
       try {
         setHasCameraPermission(true);
@@ -101,7 +106,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   };
 
   useEffect(() => {
-    if (scanMode === 'camera') {
+    if (scanMode === 'camera' && !isErrorActive) {
         startCamera();
     } else {
         stopCamera();
@@ -110,7 +115,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     return () => {
       stopCamera();
     };
-  }, [scanMode]);
+  }, [scanMode, isErrorActive]); // Add isErrorActive to dependency array
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
@@ -122,6 +127,17 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     }
   }, [detectedBarcode]);
 
+  const handleModeChange = (mode: ScanMode) => {
+    setIsErrorActive(false); // Reset error on mode change
+    setDetectedBarcode(null);
+    setScanMode(mode);
+  }
+
+  const handleResetClick = () => {
+    stopCamera();
+    setIsErrorActive(false);
+    onReset();
+  }
 
   return (
     <Card className="overflow-hidden shadow-lg">
@@ -157,10 +173,10 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant={scanMode === 'file' ? 'default' : 'outline'} onClick={() => { setScanMode('file'); setDetectedBarcode(null); }}>
+              <Button type="button" variant={scanMode === 'file' ? 'default' : 'outline'} onClick={() => handleModeChange('file')}>
                   <Text className="mr-2" /> Manual
               </Button>
-              <Button type="button" variant={scanMode === 'camera' ? 'default' : 'outline'} onClick={() => { setScanMode('camera'); setDetectedBarcode(null); }}>
+              <Button type="button" variant={scanMode === 'camera' ? 'default' : 'outline'} onClick={() => handleModeChange('camera')}>
                   <Camera className="mr-2" /> Camera
               </Button>
           </div>
@@ -179,7 +195,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
         </CardContent>
         <CardFooter className="flex-col gap-2">
           <SubmitButton scanMode={scanMode} isScanning={isScanning} />
-          <Button onClick={() => { stopCamera(); onReset(); }} variant="ghost" className="w-full">
+          <Button onClick={handleResetClick} variant="ghost" className="w-full">
                 <RotateCcw className="mr-2" /> Back to Selection
             </Button>
         </CardFooter>
