@@ -10,7 +10,8 @@ import { scanBarcodeAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { ScanResult, ScanError } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/browser';
+import { DecodeHintType } from '@zxing/library';
 
 interface ScannerViewProps {
   onScanResponse: (result: ScanResult | ScanError) => void;
@@ -31,7 +32,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const [isErrorActive, setIsErrorActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader>(new BrowserMultiFormatReader());
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
   const typedState = state as ScanResult | ScanError | undefined;
 
@@ -43,13 +44,23 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     }
     // The reset method can throw if the camera is not active, which is fine.
     try {
-      codeReaderRef.current.reset();
+      codeReaderRef.current?.reset();
     } catch (e) {
       // Ignore errors on reset.
     }
     setIsScanning(false);
   };
   
+  useEffect(() => {
+    // Initialize the code reader with hints.
+    if (!codeReaderRef.current) {
+        const hints = new Map();
+        const formats = [BarcodeFormat.EAN_13, BarcodeFormat.UPC_A, BarcodeFormat.CODE_128, BarcodeFormat.QR_CODE];
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+        codeReaderRef.current = new BrowserMultiFormatReader(hints);
+    }
+  }, []);
+
   useEffect(() => {
     if (typedState) {
         if ('error' in typedState) {
@@ -69,7 +80,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   
   useEffect(() => {
     const startCamera = async () => {
-      if (scanMode === 'camera' && videoRef.current && !detectedBarcode && !isErrorActive) {
+      if (scanMode === 'camera' && videoRef.current && !detectedBarcode && !isErrorActive && codeReaderRef.current) {
         try {
           setIsScanning(true);
           await codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
@@ -110,7 +121,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     return () => {
       stopCamera();
     };
-  }, [scanMode, isErrorActive, detectedBarcode]); // Consolidate camera logic here
+  }, [scanMode, isErrorActive, detectedBarcode, toast]); // Consolidate camera logic here
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
