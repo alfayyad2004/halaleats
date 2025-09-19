@@ -28,7 +28,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isErrorActive, setIsErrorActive] = useState(false); // New state to track error
+  const [isErrorActive, setIsErrorActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader>(new BrowserMultiFormatReader());
@@ -41,10 +41,11 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
+    // The reset method can throw if the camera is not active, which is fine.
     try {
-        codeReaderRef.current.reset();
+      codeReaderRef.current.reset();
     } catch (e) {
-        // It's fine if reset fails, the tracks are stopped.
+      // Ignore errors on reset.
     }
     setIsScanning(false);
   };
@@ -57,56 +58,50 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
               title: typedState.error,
               description: typedState.message,
             });
-            setIsErrorActive(true); // Set error state to true
-            setDetectedBarcode(null); // Clear the detected barcode
-            if(scanMode === 'camera') {
-                stopCamera(); // Stop the camera
-            }
+            setIsErrorActive(true);
+            setDetectedBarcode(null);
         } else {
             onScanResponse(typedState);
         }
     }
-  }, [typedState, onScanResponse, toast, scanMode]);
+  }, [typedState, onScanResponse, toast]);
 
   
-  const startCamera = async () => {
-    // Do not start if an error is active or already scanning
-    if (isErrorActive || isScanning) return; 
-
-    if (scanMode === 'camera' && videoRef.current && !detectedBarcode) {
-      try {
-        setHasCameraPermission(true);
-        setIsScanning(true);
-        await codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
-          if (result) {
-            setDetectedBarcode(result.getText());
-            stopCamera();
-          }
-          if (err && !(err.name === 'NotFoundException')) {
-            console.error(err);
-            toast({
-              variant: 'destructive',
-              title: 'Scan Error',
-              description: 'Could not decode barcode from video stream.',
-            });
-            stopCamera();
-          }
-        });
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
-        setIsScanning(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions in your browser settings to use this feature.',
-        });
-      }
-    }
-  };
-
   useEffect(() => {
-    if (scanMode === 'camera' && !isErrorActive) {
+    const startCamera = async () => {
+      if (scanMode === 'camera' && videoRef.current && !detectedBarcode && !isErrorActive) {
+        try {
+          setIsScanning(true);
+          await codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+            if (result) {
+              setDetectedBarcode(result.getText());
+              // No need to call stopCamera here, the change in detectedBarcode will handle it.
+            }
+            if (err && !(err.name === 'NotFoundException')) {
+              console.error(err);
+              toast({
+                variant: 'destructive',
+                title: 'Scan Error',
+                description: 'Could not decode barcode from video stream.',
+              });
+              setIsErrorActive(true); // Set error to stop scanning
+            }
+          });
+          setHasCameraPermission(true);
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          setHasCameraPermission(false);
+          setIsScanning(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please enable camera permissions in your browser settings to use this feature.',
+          });
+        }
+      }
+    };
+    
+    if (scanMode === 'camera' && !isErrorActive && !detectedBarcode) {
         startCamera();
     } else {
         stopCamera();
@@ -115,7 +110,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     return () => {
       stopCamera();
     };
-  }, [scanMode, isErrorActive]); // Add isErrorActive to dependency array
+  }, [scanMode, isErrorActive, detectedBarcode]); // Consolidate camera logic here
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
@@ -128,13 +123,12 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   }, [detectedBarcode]);
 
   const handleModeChange = (mode: ScanMode) => {
-    setIsErrorActive(false); // Reset error on mode change
+    setIsErrorActive(false); 
     setDetectedBarcode(null);
     setScanMode(mode);
   }
 
   const handleResetClick = () => {
-    stopCamera();
     setIsErrorActive(false);
     onReset();
   }
@@ -155,7 +149,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             {scanMode === 'camera' ? (
               <>
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                {isScanning && <ScanLine className="absolute w-full h-1 text-primary/50 animate-pulse" style={{ animationDuration: '3s' }}/>}
+                {isScanning && !detectedBarcode && <ScanLine className="absolute w-full h-1 text-primary/50 animate-pulse" style={{ animationDuration: '3s' }}/>}
                 {hasCameraPermission === false && (
                     <Alert variant="destructive" className="absolute">
                         <AlertTitle>Camera Access Required</AlertTitle>
