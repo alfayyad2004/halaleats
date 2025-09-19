@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { ScanResult, ScanError } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/browser';
-import { DecodeHintType } from '@zxing/library';
+import type { DecodeHintType } from '@zxing/library';
 
 interface ScannerViewProps {
   onScanResponse: (result: ScanResult | ScanError) => void;
@@ -29,35 +29,19 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isErrorActive, setIsErrorActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
   const typedState = state as ScanResult | ScanError | undefined;
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    // The reset method can throw if the camera is not active, which is fine.
-    try {
-      codeReaderRef.current?.reset();
-    } catch (e) {
-      // Ignore errors on reset.
-    }
-    setIsScanning(false);
-  };
-  
+  // Initialize the code reader once.
   useEffect(() => {
-    // Initialize the code reader with hints.
     if (!codeReaderRef.current) {
         const hints = new Map();
         const formats = [BarcodeFormat.EAN_13, BarcodeFormat.UPC_A, BarcodeFormat.CODE_128, BarcodeFormat.QR_CODE];
         hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-        codeReaderRef.current = new BrowserMultiFormatReader(hints);
+        codeReaderRef.current = new BrowserMultiFormatReader(hints, 500);
     }
   }, []);
 
@@ -69,73 +53,88 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
               title: typedState.error,
               description: typedState.message,
             });
-            setIsErrorActive(true);
+            // Reset barcode to allow for a new scan attempt after error
             setDetectedBarcode(null);
+            // Re-enable scanning if in camera mode
+            if (scanMode === 'camera') {
+              setIsScanning(true);
+            }
         } else {
             onScanResponse(typedState);
         }
     }
-  }, [typedState, onScanResponse, toast]);
+  }, [typedState, onScanResponse, toast, scanMode]);
 
-  
+
   useEffect(() => {
-    const startCamera = async () => {
-      if (scanMode === 'camera' && videoRef.current && !detectedBarcode && !isErrorActive && codeReaderRef.current) {
+    const codeReader = codeReaderRef.current;
+    if (scanMode === 'camera' && codeReader) {
+      const startScan = async () => {
+        setIsScanning(true);
         try {
-          setIsScanning(true);
-          await codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
-            if (result) {
-              setDetectedBarcode(result.getText());
-              // No need to call stopCamera here, the change in detectedBarcode will handle it.
-            }
-            if (err && !(err.name === 'NotFoundException')) {
-              console.error(err);
-              setIsErrorActive(true); // Set error to stop scanning
-            }
-          });
-          setHasCameraPermission(true);
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            setHasCameraPermission(true);
+            await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+              if (result && !detectedBarcode) {
+                setDetectedBarcode(result.getText());
+                setIsScanning(false);
+              }
+              if (err && !(err.name === 'NotFoundException')) {
+                 console.error('Barcode scan error:', err);
+                 // Stop scanning on other errors
+                 setIsScanning(false);
+              }
+            });
+          }
         } catch (error) {
-          console.error('Error accessing camera:', error);
-          setHasCameraPermission(false);
-          setIsScanning(false);
-          toast({
+           console.error('Camera access error:', error);
+           setHasCameraPermission(false);
+           setIsScanning(false);
+           toast({
             variant: 'destructive',
             title: 'Camera Access Denied',
             description: 'Please enable camera permissions in your browser settings to use this feature.',
           });
         }
-      }
-    };
-    
-    if (scanMode === 'camera' && !isErrorActive && !detectedBarcode) {
-        startCamera();
-    } else {
-        stopCamera();
-    }
+      };
 
-    return () => {
-      stopCamera();
-    };
-  }, [scanMode, isErrorActive, detectedBarcode, toast]); // Consolidate camera logic here
+      startScan();
+
+      return () => {
+        codeReader.reset();
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+        }
+        setIsScanning(false);
+      };
+    }
+  }, [scanMode, detectedBarcode, toast]);
+
 
   useEffect(() => {
     if (detectedBarcode && formRef.current) {
         const barcodeInput = formRef.current.elements.namedItem('barcode') as HTMLInputElement;
         if (barcodeInput) {
             barcodeInput.value = detectedBarcode;
-            setTimeout(() => formRef.current?.requestSubmit(), 100);
+            // Ensure we are not already in a pending state from a previous submission
+            const status = formRef.current.dataset.pending;
+            if (status !== 'true') {
+              setTimeout(() => formRef.current?.requestSubmit(), 100);
+            }
         }
     }
   }, [detectedBarcode]);
 
   const handleModeChange = (mode: ScanMode) => {
-    setIsErrorActive(false); 
     setDetectedBarcode(null);
     setScanMode(mode);
   }
 
   const handleResetClick = () => {
-    setIsErrorActive(false);
     onReset();
   }
 
@@ -188,13 +187,14 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
               className="text-center text-lg h-12"
               aria-label="Barcode Input"
               required
+              disabled={detectedBarcode !== null}
             />
           ) : (
              <Input type="hidden" name="barcode" defaultValue={detectedBarcode || ''} />
           )}
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          <SubmitButton scanMode={scanMode} isScanning={isScanning} />
+          <SubmitButton scanMode={scanMode} />
           <Button onClick={handleResetClick} variant="ghost" className="w-full">
                 <RotateCcw className="mr-2" /> Back to Selection
             </Button>
@@ -204,28 +204,26 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   );
 }
 
-function SubmitButton({ scanMode, isScanning }: { scanMode: ScanMode, isScanning: boolean }) {
+function SubmitButton({ scanMode }: { scanMode: ScanMode }) {
   const { pending } = useFormStatus();
-  const isDisabled = pending || (scanMode === 'camera' && isScanning);
 
   if (scanMode === 'camera') {
-    return (
-        <Button type="submit" className="w-full" size="lg" disabled={!pending} style={{ display: pending ? 'inline-flex' : 'none' }}>
-            {pending ? (
-                <>
-                    <Loader className="mr-2 animate-spin" />
-                    Scanning...
-                </>
-            ) : 'Check Product'}
+    // In camera mode, we only show the loading state, as submission is automatic.
+    return pending ? (
+        <Button type="submit" className="w-full" size="lg" disabled>
+            <Loader className="mr-2 animate-spin" />
+            Checking...
         </Button>
-    );
+    ) : null;
   }
+  
+  // In manual mode, we show a submittable button.
   return (
-    <Button type="submit" className="w-full" size="lg" disabled={isDisabled}>
+    <Button type="submit" className="w-full" size="lg" disabled={pending}>
       {pending ? (
         <>
             <Loader className="mr-2 animate-spin" />
-            Scanning...
+            Checking...
         </>
       ) : 'Check Product'}
     </Button>
