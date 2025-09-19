@@ -34,24 +34,6 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   const typedState = state as ScanResult | ScanError | undefined;
 
-  useEffect(() => {
-    if (typedState) {
-        if ('error' in typedState) {
-            toast({
-              variant: 'destructive',
-              title: typedState.error,
-              description: typedState.message,
-            });
-            setDetectedBarcode(null);
-            if(scanMode === 'camera') {
-                startCamera();
-            }
-        } else {
-            onScanResponse(typedState);
-        }
-    }
-  }, [typedState, onScanResponse, toast, scanMode]);
-
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -65,6 +47,25 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     }
     setIsScanning(false);
   };
+  
+  useEffect(() => {
+    if (typedState) {
+        if ('error' in typedState) {
+            toast({
+              variant: 'destructive',
+              title: typedState.error,
+              description: typedState.message,
+            });
+            setDetectedBarcode(null); // Clear the detected barcode to allow a new scan
+            if(scanMode === 'camera') {
+                stopCamera(); // Stop the camera to prevent immediate rescan
+            }
+        } else {
+            onScanResponse(typedState);
+        }
+    }
+  }, [typedState, onScanResponse, toast, scanMode]);
+
   
   const startCamera = async () => {
     if (scanMode === 'camera' && videoRef.current && !detectedBarcode) {
@@ -189,7 +190,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
 function SubmitButton({ scanMode, isScanning }: { scanMode: ScanMode, isScanning: boolean }) {
   const { pending } = useFormStatus();
-  const isDisabled = pending || isScanning;
+  const isDisabled = pending || (scanMode === 'camera' && isScanning);
 
   if (scanMode === 'camera') {
     return (
