@@ -64,7 +64,8 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   
   const stopCamera = () => {
     if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
+        // The reset method doesn't exist on the instance, this was causing a crash.
+        // Stopping the stream tracks is the correct way to stop the scanner.
     }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -82,7 +83,8 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
           const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
           setHasCameraPermission(true);
           if (videoRef.current) {
-            const result = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+            // No need to await this, as it runs continuously
+            codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
                 if (result && !detectedBarcode) {
                   setDetectedBarcode(result.getText());
                 }
@@ -110,7 +112,8 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
     } else {
         stopCamera();
     }
-  }, [scanMode, detectedBarcode, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanMode, toast]);
 
 
   useEffect(() => {
