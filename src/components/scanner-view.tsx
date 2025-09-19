@@ -90,11 +90,6 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             }
             if (err && !(err.name === 'NotFoundException')) {
               console.error(err);
-              toast({
-                variant: 'destructive',
-                title: 'Scan Error',
-                description: 'Could not decode barcode from video stream.',
-              });
               setIsErrorActive(true); // Set error to stop scanning
             }
           });
