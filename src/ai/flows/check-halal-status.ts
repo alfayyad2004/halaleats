@@ -34,9 +34,9 @@ const prompt = ai.definePrompt({
   name: 'checkHalalStatusPrompt',
   input: {schema: CheckHalalStatusInputSchema},
   output: {schema: CheckHalalStatusOutputSchema},
-  prompt: `You are a halal food expert. Given the following list of ingredients, and potentially the product's brand, determine if the product is halal.
+  prompt: `You are a halal food and pharmaceutical expert. Given the following list of ingredients, and potentially the product's brand, determine if the product is halal.
 
-Consider these non-halal ingredients:
+Consider these non-halal or doubtful ingredients:
 ${nonHalalIngredients.join(', ')}
 
 Here is a list of brands that are often known for producing halal products (though certification can vary):
@@ -46,12 +46,14 @@ Product Brand: {{{brand}}}
 Ingredients: {{{ingredients}}}
 
 Your Task:
-1. Check the ingredients against the non-halal list. If any are present, the product is not halal.
-2. For ambiguous ingredients (like "flavor", "enzymes", "glycerin", "chicken flavor"), consider the brand. If the brand is on the known halal list, you can be more lenient, but should still list it as a potential concern for the user to verify. For example, you might say "Contains 'chicken flavor', which is often halal in products by this brand, but verification is recommended."
-3. If the brand is not on the known list, treat ambiguous ingredients with higher suspicion.
-4. If there are potential concerns (ambiguous ingredients), list them in the concerns field.
-5. If the product contains explicitly non-halal ingredients, set isHalal to false and list the specific ingredients in the concerns field.
-6. Return the results as JSON.`,
+1.  Check the ingredients against the non-halal/doubtful list. If any explicitly haram ingredients (like pork, alcohol) are present, the product is not halal.
+2.  For ambiguous ingredients (like "glycerin", "enzymes", "magnesium stearate", "gelatin"), the source is critical. If the source is not specified as plant-based or from a halal animal source, treat it as a concern.
+3.  When analyzing medications or vitamins, pay special attention to the source of gelatin (used in capsules), glycerin, magnesium stearate, and any coatings (like shellac/pharmaceutical glaze). These are very often from non-halal sources.
+4.  Consider the brand. If the brand is on the known halal list, you can be more lenient on ambiguous items, but should still list it as a potential concern for the user to verify. For example: "Contains 'gelatin', which is often from a halal source in products by this brand, but verification is recommended."
+5.  If the brand is not on the known list, treat ambiguous ingredients with higher suspicion.
+6.  If there are potential concerns (ambiguous ingredients), set isHalal to true but list them clearly in the concerns field.
+7.  If the product contains explicitly non-halal ingredients, set isHalal to false and list the specific ingredients in the concerns field.
+8.  Return the results as JSON.`,
 });
 
 const checkHalalStatusFlow = ai.defineFlow(

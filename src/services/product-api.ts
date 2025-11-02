@@ -21,6 +21,22 @@ const MOCK_PRODUCTS: { [barcode: string]: { name: string, ingredients: string } 
   '5000159459578': { // Nutella
     name: 'Nutella',
     ingredients: 'Sugar, Palm Oil, Hazelnuts (13%), Skimmed Milk Powder (8.7%), Fat-Reduced Cocoa (7.4%), Emulsifier: Lecithins (Soya), Vanillin.'
+  },
+  '6953390214697': { // Holiday Foods Ketchup (Trinidad)
+    name: 'Holiday Foods Tomato Ketchup',
+    ingredients: 'Tomato Concentrate, Vinegar, Sugar, Salt, Spices, Onion Powder.',
+  },
+  '074470000105': { // KC Candy (Trinidad)
+    name: 'KC Confectionery Chocolate Mint',
+    ingredients: 'Sugar, Glucose Syrup, Cocoa Mass, Peppermint Oil, Soy Lecithin. May contain milk.',
+  },
+  '087684001104': { // Centrum Adult Multivitamin
+    name: 'Centrum Adult Multivitamin',
+    ingredients: 'Calcium Carbonate, Potassium Chloride, Dibasic Calcium Phosphate, Magnesium Oxide, Ascorbic Acid (Vit. C), Microcrystalline Cellulose, Ferrous Fumarate, Gelatin, Croscarmellose Sodium, Tocopheryl Acetate (Vit. E), Stearic Acid, Niacinamide, Zinc Oxide, Calcium Pantothenate, Manganese Sulfate.',
+  },
+  '0300054336086': { // Advil Liqui-Gels
+    name: 'Advil Liqui-Gels',
+    ingredients: 'Solubilized ibuprofen equal to 200 mg ibuprofen, FD&C green no. 3, gelatin, lecithin (soybean), medium-chain triglycerides, pharmaceutical ink, polyethylene glycol, potassium hydroxide, purified water, sorbitol sorbitan solution.',
   }
 };
 
