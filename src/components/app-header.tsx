@@ -17,17 +17,25 @@ import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 
 export function AppHeader() {
-  const { appUser, auth } = useUser();
+  const { appUser, auth, loading } = useUser();
+
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      // The useUser hook will handle redirection automatically
+    }
+  };
+
   return (
     <header className="flex items-center justify-between p-4 border-b bg-card">
-      <div className="flex items-center gap-3">
+      <Link href="/" className="flex items-center gap-3" aria-label="Go to homepage">
         <ScanBarcode className="w-8 h-8 text-primary" />
         <h1 className="text-2xl font-headline font-bold text-foreground">
           HalalEats
         </h1>
-      </div>
+      </Link>
       <div className='flex items-center gap-2'>
-         {appUser ? (
+         {appUser && !loading ? (
           <>
             {appUser.role === 'admin' && (
               <Link href="/admin">
@@ -36,11 +44,11 @@ export function AppHeader() {
                 </Button>
               </Link>
             )}
-            <Button variant="ghost" size="icon" onClick={() => auth && signOut(auth)} title="Log Out">
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Log Out">
               <LogOut className="w-6 h-6" />
             </Button>
           </>
-        ) : (
+        ) : !loading && (
           <Link href="/login">
             <Button variant="ghost" size="sm">Admin Login</Button>
           </Link>
