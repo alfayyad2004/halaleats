@@ -29,17 +29,21 @@ export default function AdminPage() {
     }
   }, [appUser, userLoading, router]);
 
-  // While checking auth, show a loader.
+  // While checking auth, show a full-page loader. This prevents flicker.
   if (userLoading) {
     return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Loader className="animate-spin" />
+        <div className="min-h-screen w-full flex flex-col">
+            <AppHeader />
+            <div className="flex-grow flex items-center justify-center">
+                <Loader className="animate-spin" />
+            </div>
         </div>
     );
   }
 
   // If after loading, there's still no admin user, don't render the page.
-  // The useEffect above will handle the redirect.
+  // The useEffect above will handle the redirect. This prevents rendering the dashboard
+  // for a non-admin user for a split second before redirecting.
   if (!appUser || appUser.role !== 'admin') {
       return null;
   }
