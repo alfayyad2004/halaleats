@@ -3,6 +3,7 @@
 import { checkHalalStatus, CheckHalalStatusOutput } from '@/ai/flows/check-halal-status';
 import { fetchIngredientList } from '@/ai/flows/fetch-ingredient-list';
 import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from-image';
+import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
@@ -143,11 +144,9 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
   const { barcode, email } = validatedFields.data;
   
   try {
-    await addUnrecognizedProduct(barcode, email || undefined);
-    return {
-      success: true,
-      message: "Thank you for your submission! We'll review it shortly.",
-    };
+    // Delegate the submission to the secure Genkit flow
+    const result = await submitUnrecognizedProduct({ barcode, email });
+    return result;
   } catch(e) {
     console.error(e);
     return {

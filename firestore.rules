@@ -18,11 +18,11 @@ service cloud.firestore {
       allow read, update: if isOwner(userId);
     }
     
-    // Admins can perform all actions. Anyone can create a new unrecognized product.
+    // Admins can perform all actions.
+    // Client-side creation is disallowed to force submissions through the secure flow.
     match /unrecognizedProducts/{productId} {
       allow list, read, update, delete: if isAdmin();
-      allow create: if request.resource.data.keys().hasAll(['barcode', 'createdAt', 'reviewed', 'submittedByEmail']) &&
-                      request.resource.data.reviewed == false;
+      allow create: if false; // Disallow direct client creation
     }
   }
 }

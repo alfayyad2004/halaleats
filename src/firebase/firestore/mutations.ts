@@ -5,6 +5,8 @@ import type { User } from "firebase/auth";
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
 
+// This function is no longer used for adding products, as it's been replaced by a secure Genkit flow.
+// It's kept here for reference or potential future admin-specific use.
 export async function addUnrecognizedProduct(barcode: string, email?: string) {
     const { firestore } = getFirebase();
     if (!firestore) {
@@ -67,12 +69,12 @@ export function createUserProfile(user: User) {
     };
 
     // Do not await. Let the UI continue and handle the error in the background.
-    setDoc(userDocRef, userData)
+    setDoc(userDocRef, userData, { merge: true })
         .catch((serverError) => {
             // Create a rich, contextual error and emit it globally.
             const permissionError = new FirestorePermissionError({
                 path: userDocRef.path,
-                operation: 'create', // Explicitly a 'create' operation for a new user profile
+                operation: 'write', 
                 requestResourceData: userData,
             });
             errorEmitter.emit('permission-error', permissionError);
@@ -104,8 +106,22 @@ export function classifyProduct(
                 requestResourceData: updatedData,
             });
             errorEmitter.emit('permission-error', permissionError);
-            // We still throw here so the component's error handling can catch it
-            // and show a toast to the user.
             throw serverError;
         });
+    
+    // TODO: After successful update, get the original submitter's email
+    // and send them a notification about the status.
+    // Example:
+    // const productDoc = await getDoc(productRef);
+    // const submitterEmail = productDoc.data()?.submittedByEmail;
+    // if (submitterEmail) {
+    //   const halalStatus = await checkHalalStatus({ ingredients, brand: productName });
+    //   // Call an email sending flow here
+    //   // await sendClassificationEmailFlow({
+    //   //   email: submitterEmail,
+    //   //   productName,
+    //   //   halalStatus: halalStatus.isHalal ? 'Halal' : 'Not Halal',
+    //   //   concerns: halalStatus.concerns,
+    //   // });
+    // }
 }

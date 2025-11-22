@@ -73,7 +73,8 @@
       "required": [
         "barcode",
         "createdAt",
-        "reviewed"
+        "reviewed",
+        "submittedByEmail"
       ]
     }
   },
