@@ -28,12 +28,12 @@ service cloud.firestore {
     }
     
     // --- Unrecognized Products ---
-    // Any user (authenticated or anonymous) can create a new unrecognized product entry.
-    // This allows the public to submit products for review.
-    // Any user can also read the collection to allow for duplicate checking before submission.
+    // Submissions are handled by a secure server action, so client-side creation is disallowed.
+    // Any user can read the list to allow for future client-side duplicate checking if needed.
     // Only admins can update (classify) or delete these entries.
     match /unrecognizedProducts/{productId} {
-      allow read, create: if true;
+      allow read: if true;
+      allow create: if false;
       allow update, delete: if isAdmin();
     }
   }

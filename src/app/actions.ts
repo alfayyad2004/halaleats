@@ -6,7 +6,19 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { addUnrecognizedProduct, classifyProduct } from '@/firebase/firestore/mutations';
+import { classifyProduct } from '@/firebase/firestore/mutations';
+import * as admin from 'firebase-admin';
+
+
+// Initialize Firebase Admin SDK if not already initialized.
+// This is safe to run on the server multiple times.
+if (admin.apps.length === 0) {
+    try {
+        admin.initializeApp();
+    } catch (e) {
+        console.error('Firebase Admin initialization error', e);
+    }
+}
 
 
 export type ScanResult = {
@@ -129,31 +141,54 @@ const SubmitReviewSchema = z.object({
 });
 
 export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
-  const validatedFields = SubmitReviewSchema.safeParse({
-    barcode: formData.get('barcode'),
-    email: formData.get('email'),
-  });
+    const validatedFields = SubmitReviewSchema.safeParse({
+        barcode: formData.get('barcode'),
+        email: formData.get('email'),
+    });
 
-  if (!validatedFields.success) {
-    return {
-      success: false,
-      message: validatedFields.error.flatten().fieldErrors.barcode?.join(', ') || 'Invalid data.',
-    };
-  }
-
-  const { barcode, email } = validatedFields.data;
-  
-  try {
-    const result = await addUnrecognizedProduct(barcode, email || '');
-    return result;
-  } catch(error) {
-    console.error('Error in submitReviewAction:', error);
-    // Do not expose detailed internal errors to the client.
-    return {
-        success: false,
-        message: "A server error occurred while submitting the product. Please ensure you are logged in.",
+    if (!validatedFields.success) {
+        return {
+            success: false,
+            message: 'Invalid data provided. Please check the form and try again.',
+        };
     }
-  }
+
+    const { barcode, email } = validatedFields.data;
+
+    try {
+        const firestore = admin.firestore();
+        const productsRef = firestore.collection('unrecognizedProducts');
+        
+        // Check for an existing, unreviewed product with the same barcode.
+        const q = productsRef.where('barcode', '==', barcode).where('reviewed', '==', false);
+        const querySnapshot = await q.get();
+
+        if (!querySnapshot.empty) {
+            return {
+                success: true,
+                message: 'This product has already been submitted for review. Thank you!',
+            };
+        }
+
+        // Add the new product for review.
+        await productsRef.add({
+            barcode,
+            submittedByEmail: email || '',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            reviewed: false,
+        });
+
+        return {
+            success: true,
+            message: "Thank you for your submission! We'll review it shortly.",
+        };
+    } catch (error) {
+        console.error('Error in submitReviewAction:', error);
+        return {
+            success: false,
+            message: 'A server error occurred while submitting the product. Please try again later.',
+        };
+    }
 }
 
 const ClassifyProductSchema = z.object({
