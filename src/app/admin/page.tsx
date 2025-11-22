@@ -55,7 +55,7 @@ export default function AdminPage() {
                         <TableHead>Submitted By</TableHead>
                         <TableHead>Scanned On</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
