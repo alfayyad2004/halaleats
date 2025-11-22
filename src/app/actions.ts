@@ -7,6 +7,7 @@ import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
 import { addUnrecognizedProduct, classifyProduct } from '@/firebase/firestore/mutations';
+import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
 
 export type ScanResult = {
   productName: string;
@@ -143,13 +144,16 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
   const { barcode, email } = validatedFields.data;
   
   try {
-    const result = await addUnrecognizedProduct(barcode, email);
+    // Use the secure Genkit flow for submission
+    const result = await submitUnrecognizedProduct({ barcode, submittedByEmail: email || '' });
     return result;
   } catch(e) {
-    console.error(e);
+    console.error('Error in submitReviewAction:', e);
+    // Cast to 'any' to check for a 'message' property
+    const error = e as any;
     return {
       success: false,
-      message: "There was an error submitting your review. Please try again.",
+      message: error.message || "There was a server error submitting your review. Please try again.",
     }
   }
 }

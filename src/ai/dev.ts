@@ -5,3 +5,4 @@ import '@/ai/flows/fetch-ingredient-list.ts';
 import '@/ai/flows/identify-product-from-barcode.ts';
 import '@/ai/flows/check-halal-status.ts';
 import '@/ai/flows/extract-ingredients-from-image.ts';
+import '@/ai/flows/submit-unrecognized-product.ts';
