@@ -1,25 +1,25 @@
+
 'use server';
 
-import { checkHalalStatus, CheckHalalStatusOutput } from '@/ai/flows/check-halal-status';
+import { CheckHalalStatusOutput, checkHalalStatus } from '@/ai/flows/check-halal-status';
 import { fetchIngredientList } from '@/ai/flows/fetch-ingredient-list';
 import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from-image';
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { classifyProduct } from '@/firebase/firestore/mutations';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
 // This needs to be done once per server instance.
 if (!admin.apps.length) {
-    try {
-        // When deployed to App Hosting, the service account credentials will be
-        // automatically available in the environment via Application Default Credentials.
-        admin.initializeApp();
-    } catch (e) {
-        console.error('CRITICAL: Firebase Admin initialization failed in actions.ts.', e);
-    }
+  try {
+    admin.initializeApp();
+  } catch (e) {
+    console.error('CRITICAL: Firebase Admin initialization error in actions.ts.', e);
+  }
 }
+
+const firestore = admin.firestore();
 
 
 export type ScanResult = {
@@ -142,6 +142,10 @@ const SubmitReviewSchema = z.object({
 });
 
 export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
+    if (!admin.apps.length) {
+        return { success: false, message: 'The server is not configured correctly.' };
+    }
+
     const validatedFields = SubmitReviewSchema.safeParse({
         barcode: formData.get('barcode'),
         email: formData.get('email'),
@@ -153,18 +157,8 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
             message: 'Invalid data provided. Please check the form and try again.',
         };
     }
-    
-    // Ensure the admin app is available.
-    if (!admin.apps.length) {
-        console.error("Firebase Admin SDK is not initialized. Cannot submit for review.");
-        return {
-            success: false,
-            message: "The server is not configured correctly. Please contact support.",
-        };
-    }
 
     const { barcode, email } = validatedFields.data;
-    const firestore = admin.firestore();
     const productsRef = firestore.collection("unrecognizedProducts");
 
     try {
@@ -196,7 +190,7 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
         console.error("Error in submitReviewAction interacting with Firestore:", error);
         return {
             success: false,
-            message: 'A server error occurred while submitting the product.',
+            message: 'The server is not configured correctly.',
         };
     }
 }
@@ -209,6 +203,10 @@ const ClassifyProductSchema = z.object({
 });
 
 export async function classifyProductAction(prevState: any, formData: FormData) {
+    if (!admin.apps.length) {
+        return { success: false, message: 'The server is not configured correctly.' };
+    }
+
     const validatedFields = ClassifyProductSchema.safeParse({
         id: formData.get('id'),
         productName: formData.get('productName'),
@@ -221,17 +219,8 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
             message: 'Invalid data provided.',
         };
     }
-    
-    if (!admin.apps.length) {
-        console.error("Firebase Admin SDK is not initialized. Cannot classify product.");
-        return {
-            success: false,
-            message: "The server is not configured correctly.",
-        };
-    }
 
     const { id, productName, ingredients } = validatedFields.data;
-    const firestore = admin.firestore();
     const productRef = firestore.collection('unrecognizedProducts').doc(id);
 
     try {
@@ -248,7 +237,7 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
         console.error("Error in classifyProductAction:", e);
         return {
             success: false,
-            message: e.message || 'An error occurred while classifying the product.',
+            message: 'The server is not configured correctly.',
         };
     }
 }
