@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HalalEatsLogo } from '@/components/halal-eats-logo';
 import { Loader } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const { appUser, auth, loading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && appUser) {
@@ -23,11 +25,45 @@ export default function LoginPage() {
   }, [appUser, loading, router]);
 
   const handleGoogleSignIn = async () => {
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Firebase Not Initialized',
+            description: 'The authentication service is not ready. Please refresh the page.',
+        });
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during sign-in:', error);
+      if (error.code === 'auth/configuration-not-found') {
+          toast({
+              variant: 'destructive',
+              title: 'Sign-In Method Not Enabled',
+              description: (
+                  <div>
+                      <p>Google Sign-In is not enabled for this Firebase project.</p>
+                      <a 
+                          href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/authentication/providers`}
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="underline"
+                      >
+                          Click here to enable it in the Firebase Console.
+                      </a>
+                  </div>
+              ),
+              duration: 10000,
+          });
+      } else {
+          toast({
+              variant: 'destructive',
+              title: 'Sign-In Error',
+              description: error.message || 'An unknown error occurred during sign-in.',
+          });
+      }
     }
   };
 
