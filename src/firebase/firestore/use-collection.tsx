@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import {
@@ -16,6 +17,8 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { useFirestore } from '..';
+import { errorEmitter } from '../error-emitter';
+import { FirestorePermissionError } from '../errors';
 
 interface UseCollectionOptions {
   sort?: {
@@ -63,15 +66,25 @@ export function useCollection<T>(collectionName: string, options: UseCollectionO
         });
         setData(result);
         setLoading(false);
+        setError(null);
       },
       (err) => {
+        if (err.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: (collectionRef as CollectionReference).path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }
         setError(err);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [collectionName, firestore, options.filter, options.sort, options.limit]);
+  // We stringify the options to avoid re-running the effect on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionName, firestore, JSON.stringify(options)]);
 
   return { data, loading, error };
 }
