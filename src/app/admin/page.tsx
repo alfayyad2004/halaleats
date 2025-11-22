@@ -22,7 +22,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!userLoading && (!appUser || appUser.role !== 'admin')) {
-      router.push('/login');
+      router.push('/');
     }
   }, [appUser, userLoading, router]);
 
