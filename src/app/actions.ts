@@ -6,8 +6,8 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import * as d from "firebase-admin";
-import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
+import { submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
+import { classifyProduct } from '@/firebase/firestore/mutations';
 
 
 export type ScanResult = {
@@ -151,7 +151,7 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
         return result;
 
     } catch (error: any) {
-        console.error("Error in submitReviewAction calling flow:", error);
+        console.error("Error in submitReviewAction calling mutation:", error);
         return {
             success: false,
             message: error.message || 'A server error occurred while submitting the product.',
@@ -176,25 +176,14 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
     if (!validatedFields.success) {
         return {
             success: false,
-message: 'Invalid data provided.',
+            message: 'Invalid data provided.',
         };
     }
 
     const { id, productName, ingredients } = validatedFields.data;
 
     try {
-        if (!d.apps.length) {
-          d.initializeApp();
-        }
-        const firestore = d.firestore();
-        const productRef = firestore.collection('unrecognizedProducts').doc(id);
-        
-        await productRef.update({
-            productName,
-            ingredients,
-            reviewed: true,
-        });
-
+        await classifyProduct(id, productName, ingredients);
         return {
             success: true,
             message: 'Product has been classified successfully!',
