@@ -6,8 +6,7 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { classifyProduct } from '@/firebase/firestore/mutations';
-import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
+import { classifyProduct, addUnrecognizedProduct } from '@/firebase/firestore/mutations';
 
 
 export type ScanResult = {
@@ -145,19 +144,16 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
     const { barcode, email } = validatedFields.data;
 
     try {
-        // Delegate the entire operation to the secure Genkit flow
-        const result = await submitUnrecognizedProduct({
-            barcode,
-            submittedByEmail: email || undefined,
-        });
-        return result;
-    } catch (error) {
-        console.error('Error in submitReviewAction calling flow:', error);
-        // The flow itself will throw an error if something goes wrong internally.
-        // We catch it here to provide a generic, safe message to the user.
+        await addUnrecognizedProduct(barcode, email || undefined);
+        return {
+            success: true,
+            message: "Thank you for your submission! We'll review it shortly.",
+        };
+    } catch (error: any) {
+        console.error('Error in submitReviewAction:', error);
         return {
             success: false,
-            message: 'A server error occurred while submitting the product. Please try again later.',
+            message: error.message || 'A server error occurred while submitting the product.',
         };
     }
 }

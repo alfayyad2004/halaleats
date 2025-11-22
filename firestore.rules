@@ -28,12 +28,11 @@ service cloud.firestore {
     }
     
     // --- Unrecognized Products ---
-    // Submissions are handled by a secure server action (Genkit flow), so client-side creation is disallowed.
-    // Any user can read the list to allow for future client-side duplicate checking if needed.
-    // Only admins can update (classify) or delete these entries.
+    // Any user (authenticated or not) can submit a product for review.
+    // They can read the collection to check for duplicates, and create new ones.
+    // Only admins can update (classify) or delete entries.
     match /unrecognizedProducts/{productId} {
-      allow read: if true;
-      allow create: if false; // All creates must go through the secure server flow.
+      allow read, create: if true;
       allow update, delete: if isAdmin();
     }
   }
