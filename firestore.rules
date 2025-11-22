@@ -14,7 +14,8 @@ service cloud.firestore {
 
     // Users can only read and write to their own profile
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow create, read: if isOwner(userId);
+      allow update: if isOwner(userId);
     }
     
     // Admins can read and write to the unrecognized products collection
