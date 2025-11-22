@@ -31,8 +31,9 @@ export type SubmitUnrecognizedProductOutput = z.infer<typeof SubmitUnrecognizedP
 // This is a critical step for server-side flows.
 if (admin.apps.length === 0) {
     try {
-        // This will automatically use the service account credentials from the environment.
-        // It needs GOOGLE_APPLICATION_CREDENTIALS environment variable to be set.
+        // This will automatically use the service account credentials from the environment
+        // if the server (e.g., App Hosting) is configured with a service account that has
+        // the correct IAM permissions for Firestore (e.g., Cloud Datastore User).
         admin.initializeApp();
     } catch (e) {
         console.error('Firebase Admin initialization error', e);
@@ -53,20 +54,22 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
     try {
         // Ensure the admin app is initialized before trying to use its services.
         if (admin.apps.length === 0) {
-            throw new Error("Firebase Admin SDK is not initialized.");
+            throw new Error("Firebase Admin SDK is not initialized. This may be due to missing credentials on the server.");
         }
         
         const firestore = admin.firestore();
         const productsRef = firestore.collection("unrecognizedProducts");
 
         // Query to check for an existing, unreviewed product with the same barcode.
-        const q = productsRef.where("barcode", "==", barcode).where("reviewed", "==", false);
+        const q = productsRef.where("barcode", "==", barcode);
         const querySnapshot = await q.get();
 
         if (!querySnapshot.empty) {
+             // To avoid letting users know if a barcode exists, we can return a generic success message.
+             // This prevents data leakage.
             return {
-                success: true, // It's not a failure, just a duplicate.
-                message: 'This product has already been submitted for review. Thank you!',
+                success: true,
+                message: "Thank you for your submission! If this is a new product, we'll review it shortly.",
             };
         }
 
@@ -88,7 +91,7 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
         console.error("Error in submitUnrecognizedProductFlow:", error);
         // Do not expose detailed internal errors to the client.
         // Throwing an error here will be caught by the calling server action.
-        throw new Error("A server error occurred while submitting the product.");
+        throw new Error("A server error occurred while submitting the product. Please ensure server credentials are set up correctly.");
     }
   }
 );

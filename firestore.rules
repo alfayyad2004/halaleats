@@ -9,7 +9,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Check if the user is an admin. Assumes an 'admin' role in the user's profile.
+      // Check if the user is an admin. Assumes an 'role' field in the user's profile document.
       // This is a secure check as it reads from the server-side user document.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
@@ -28,12 +28,12 @@ service cloud.firestore {
     }
     
     // --- Unrecognized Products ---
-    // Submissions are handled by a secure server action, so client-side creation is disallowed.
+    // Submissions are handled by a secure server action (Genkit flow), so client-side creation is disallowed.
     // Any user can read the list to allow for future client-side duplicate checking if needed.
     // Only admins can update (classify) or delete these entries.
     match /unrecognizedProducts/{productId} {
       allow read: if true;
-      allow create: if false;
+      allow create: if false; // All creates must go through the secure server flow.
       allow update, delete: if isAdmin();
     }
   }
