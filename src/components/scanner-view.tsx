@@ -48,7 +48,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   useEffect(() => {
     if (typedState) {
-        if ('error' in typedState) {
+        if ('error' in typedState && typedState.error !== 'Product Not Found') {
             toast({
               variant: 'destructive',
               title: typedState.error,
@@ -60,12 +60,12 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             onScanResponse(typedState);
         }
     }
-  }, [typedState, onScanResponse, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typedState, toast]);
   
   const stopCamera = () => {
     if (codeReaderRef.current) {
-        // The reset method doesn't exist on the instance, this was causing a crash.
-        // Stopping the stream tracks is the correct way to stop the scanner.
+        codeReaderRef.current.reset();
     }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -76,17 +76,17 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   useEffect(() => {
     const codeReader = codeReaderRef.current;
-    if (scanMode === 'camera' && codeReader) {
+    if (scanMode === 'camera' && codeReader && !detectedBarcode) {
       const startScan = async () => {
-        setDetectedBarcode(null);
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          // Request camera permission and stream
+          await codeReader.getVideoInputDevices();
           setHasCameraPermission(true);
           if (videoRef.current) {
-            // No need to await this, as it runs continuously
-            codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+             codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
                 if (result && !detectedBarcode) {
                   setDetectedBarcode(result.getText());
+                  stopCamera();
                 }
                 if (err && !(err.name === 'NotFoundException')) {
                    console.error('Barcode scan error:', err);
@@ -113,7 +113,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
         stopCamera();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanMode, toast]);
+  }, [scanMode, toast, detectedBarcode]);
 
 
   useEffect(() => {
@@ -121,9 +121,8 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
         const barcodeInput = formRef.current.elements.namedItem('barcode') as HTMLInputElement;
         if (barcodeInput) {
             barcodeInput.value = detectedBarcode;
-            // Ensure we are not already in a pending state from a previous submission
-            const status = (formRef.current.firstChild as HTMLFieldSetElement)?.disabled;
-            if (!status) {
+            const isPending = formRef.current.hasAttribute('data-pending');
+            if (!isPending) {
               setTimeout(() => formRef.current?.requestSubmit(), 100);
             }
         }
@@ -138,6 +137,17 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const handleResetClick = () => {
     onReset();
   }
+
+  const { pending } = useFormStatus();
+  useEffect(() => {
+    if (formRef.current) {
+      if (pending) {
+        formRef.current.setAttribute('data-pending', 'true');
+      } else {
+        formRef.current.removeAttribute('data-pending');
+      }
+    }
+  }, [pending]);
 
   return (
     <Card className="overflow-hidden shadow-lg">

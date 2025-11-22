@@ -60,13 +60,16 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
         description: `${values.productName} has been updated.`,
       });
       setOpen(false);
-    } catch (error) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to classify product. Please try again.',
-      });
+    } catch (error: any) {
+      // The FirestorePermissionError will be thrown by the listener in dev,
+      // so we only need to show a generic toast here for production.
+      if (error.name !== 'FirestorePermissionError') {
+         toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to classify product. You may not have the required permissions.',
+        });
+      }
     } finally {
         setIsSubmitting(false);
     }
@@ -75,7 +78,7 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={product.reviewed ? "secondary" : "default"} size="sm" disabled={product.reviewed}>
+        <Button variant={product.reviewed ? "secondary" : "default"} size="sm">
             {product.reviewed ? 'Reviewed' : 'Classify'}
         </Button>
       </DialogTrigger>

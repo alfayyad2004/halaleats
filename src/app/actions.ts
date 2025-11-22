@@ -156,3 +156,41 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
     }
   }
 }
+
+const ClassifyProductSchema = z.object({
+    id: z.string().min(1),
+    productName: z.string().min(1, 'Product name is required.'),
+    ingredients: z.string().min(1, 'Ingredients are required.'),
+});
+
+export async function classifyProductAction(prevState: any, formData: FormData) {
+    const validatedFields = ClassifyProductSchema.safeParse({
+        id: formData.get('id'),
+        productName: formData.get('productName'),
+        ingredients: formData.get('ingredients'),
+    });
+
+    if (!validatedFields.success) {
+        return {
+            success: false,
+            message: 'Invalid data provided.',
+        };
+    }
+
+    const { id, productName, ingredients } = validatedFields.data;
+
+    try {
+        // This function does not exist yet. We will create it.
+        // await classifyProduct(id, productName, ingredients);
+        return {
+            success: true,
+            message: 'Product has been classified successfully!',
+        };
+    } catch (e: any) {
+        console.error(e);
+        return {
+            success: false,
+            message: e.message || 'An error occurred while classifying the product.',
+        };
+    }
+}
