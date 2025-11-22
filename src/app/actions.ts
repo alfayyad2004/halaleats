@@ -6,7 +6,7 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { addUnrecognizedProduct, classifyProduct } from '@/firebase/firestore/mutations';
+import { classifyProduct } from '@/firebase/firestore/mutations';
 import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
 
 export type ScanResult = {

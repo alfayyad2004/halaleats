@@ -89,7 +89,7 @@ export function classifyProduct(
   id: string,
   productName: string,
   ingredients: string
-): void {
+): Promise<void> {
     const { firestore } = getFirebase();
     if (!firestore) {
         throw new Error("Firestore not initialized");
@@ -102,7 +102,8 @@ export function classifyProduct(
         reviewed: true,
     };
 
-    updateDoc(productRef, updatedData)
+    // Return the promise from updateDoc
+    return updateDoc(productRef, updatedData)
         .catch((serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: productRef.path,
@@ -110,22 +111,7 @@ export function classifyProduct(
                 requestResourceData: updatedData,
             });
             errorEmitter.emit('permission-error', permissionError);
+            // Re-throw the original server error so the calling action knows about the failure.
             throw serverError;
         });
-    
-    // TODO: After successful update, get the original submitter's email
-    // and send them a notification about the status.
-    // Example:
-    // const productDoc = await getDoc(productRef);
-    // const submitterEmail = productDoc.data()?.submittedByEmail;
-    // if (submitterEmail) {
-    //   const halalStatus = await checkHalalStatus({ ingredients, brand: productName });
-    //   // Call an email sending flow here
-    //   // await sendClassificationEmailFlow({
-    //   //   email: submitterEmail,
-    //   //   productName,
-    //   //   halalStatus: halalStatus.isHalal ? 'Halal' : 'Not Halal',
-    //   //   concerns: halalStatus.concerns,
-    //   // });
-    // }
 }
