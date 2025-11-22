@@ -13,11 +13,12 @@ interface ResultsViewProps {
 
 export function ResultsView({ result, onReset }: ResultsViewProps) {
   const ingredients = result.ingredients.split(',').map(i => i.trim()).filter(i => i);
-  const concernIngredients = result.halalStatus.concerns.toLowerCase().split(',').map(c => c.trim());
+  const concernIngredients = result.halalStatus.concerns.toLowerCase().split(',').map(c => c.trim()).filter(c => c);
 
   const isSuspicious = (ingredient: string) => {
+    if (concernIngredients.length === 0) return false;
     const lowerIngredient = ingredient.toLowerCase();
-    return concernIngredients.some(concern => lowerIngredient.includes(concern) && concern.length > 0);
+    return concernIngredients.some(concern => lowerIngredient.includes(concern));
   };
 
   return (

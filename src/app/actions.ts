@@ -6,7 +6,7 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { addUnrecognizedProduct } from '@/firebase/firestore/mutations';
+import { addUnrecognizedProduct, classifyProduct } from '@/firebase/firestore/mutations';
 
 export type ScanResult = {
   productName: string;
@@ -143,7 +143,7 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
   const { barcode, email } = validatedFields.data;
   
   try {
-    await addUnrecognizedProduct(barcode, email);
+    await addUnrecognizedProduct(barcode, email || undefined);
     return {
       success: true,
       message: "Thank you for your submission! We'll review it shortly.",
@@ -180,8 +180,7 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
     const { id, productName, ingredients } = validatedFields.data;
 
     try {
-        // This function does not exist yet. We will create it.
-        // await classifyProduct(id, productName, ingredients);
+        await classifyProduct(id, productName, ingredients);
         return {
             success: true,
             message: 'Product has been classified successfully!',

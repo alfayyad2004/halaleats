@@ -93,16 +93,12 @@ export default function LoginPage() {
     }
   };
 
-  if (loading) {
+  if (loading || appUser) {
     return (
         <div className="min-h-screen flex items-center justify-center">
             <Loader className="animate-spin" />
         </div>
     );
-  }
-  
-  if (appUser) {
-    return null; // Don't render anything while redirecting
   }
 
   return (

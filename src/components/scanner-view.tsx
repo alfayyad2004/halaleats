@@ -33,6 +33,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const codeReaderRef = useRef<IBrowserCodeReader | null>(null);
+  const isScanningRef = useRef(false);
 
   const typedState = state as ScanResult | ScanError | undefined;
 
@@ -61,7 +62,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typedState, toast]);
+  }, [typedState]);
   
   const stopCamera = () => {
     if (codeReaderRef.current) {
@@ -76,10 +77,10 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
 
   useEffect(() => {
     const codeReader = codeReaderRef.current;
-    if (scanMode === 'camera' && codeReader && !detectedBarcode) {
+    if (scanMode === 'camera' && codeReader && !detectedBarcode && !isScanningRef.current) {
+      isScanningRef.current = true;
       const startScan = async () => {
         try {
-          // Request camera permission and stream
           await codeReader.getVideoInputDevices();
           setHasCameraPermission(true);
           if (videoRef.current) {
@@ -101,6 +102,8 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
             title: 'Camera Access Denied',
             description: 'Please enable camera permissions in your browser settings to use this feature.',
           });
+        } finally {
+            isScanningRef.current = false;
         }
       };
 
@@ -113,7 +116,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
         stopCamera();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanMode, toast, detectedBarcode]);
+  }, [scanMode, detectedBarcode]);
 
 
   useEffect(() => {

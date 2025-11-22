@@ -7,7 +7,6 @@ import { AppHeader } from '@/components/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Loader } from 'lucide-react';
 import { UnrecognizedProduct } from '@/lib/types';
 import { ClassifyProductDialog } from '@/components/classify-product-dialog';
