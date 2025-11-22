@@ -10,13 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader } from 'lucide-react';
 import { UnrecognizedProduct } from '@/lib/types';
+import { ClassifyProductDialog } from '@/components/classify-product-dialog';
 
 
 export default function AdminPage() {
   const { appUser, loading: userLoading } = useUser();
   const router = useRouter();
   const { data: products, loading: productsLoading } = useCollection<UnrecognizedProduct>('unrecognizedProducts', {
-    filter: { field: 'reviewed', operator: '==', value: false },
     sort: { field: 'createdAt', order: 'desc' }
   });
 
@@ -34,58 +34,66 @@ export default function AdminPage() {
     );
   }
 
+  const reviewedProducts = products.filter(p => p.reviewed);
+  const unreviewedProducts = products.filter(p => !p.reviewed);
+
+  const renderProductTable = (title: string, productList: UnrecognizedProduct[]) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {productsLoading ? (
+            <div className="flex justify-center items-center h-40">
+                <Loader className="animate-spin" />
+            </div>
+        ) : (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Barcode</TableHead>
+                        <TableHead>Submitted By</TableHead>
+                        <TableHead>Scanned On</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead></TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {productList.map((product) => (
+                        <TableRow key={product.id}>
+                            <TableCell className="font-mono">{product.barcode}</TableCell>
+                            <TableCell>{product.submittedByEmail || 'Anonymous'}</TableCell>
+                            <TableCell>{product.createdAt ? new Date(product.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
+                            <TableCell>
+                                <Badge variant={product.reviewed ? 'secondary' : 'outline'}>
+                                    {product.reviewed ? 'Reviewed' : 'Needs Review'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <ClassifyProductDialog product={product} />
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )}
+        {!productsLoading && productList.length === 0 && (
+            <p className="text-center text-muted-foreground py-10">
+                No products in this category.
+            </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Unrecognized Products</CardTitle>
-                    <CardDescription>
-                        Review products that were scanned but not found in the database.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {productsLoading ? (
-                        <div className="flex justify-center items-center h-40">
-                            <Loader className="animate-spin" />
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Barcode</TableHead>
-                                    <TableHead>Scanned On</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {products.map((product) => (
-                                    <TableRow key={product.id}>
-                                        <TableCell className="font-mono">{product.barcode}</TableCell>
-                                        <TableCell>{product.createdAt ? new Date(product.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={product.reviewed ? 'secondary' : 'outline'}>
-                                                {product.reviewed ? 'Reviewed' : 'Needs Review'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" disabled>Classify</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                    {!productsLoading && products.length === 0 && (
-                        <p className="text-center text-muted-foreground py-10">
-                            No unrecognized products to review.
-                        </p>
-                    )}
-                </CardContent>
-            </Card>
+        <div className="max-w-6xl mx-auto space-y-6">
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            {renderProductTable('Needs Review', unreviewedProducts)}
+            {renderProductTable('Reviewed', reviewedProducts)}
         </div>
       </main>
     </div>

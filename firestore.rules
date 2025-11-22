@@ -18,9 +18,11 @@ service cloud.firestore {
       allow read, update: if isOwner(userId);
     }
     
-    // Admins can read and write to the unrecognized products collection
+    // Admins can read and write. Anyone can create a new unrecognized product.
     match /unrecognizedProducts/{productId} {
-      allow read, write: if isAdmin();
+      allow read, update, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasAll(['barcode', 'createdAt', 'reviewed', 'submittedByEmail']) &&
+                      request.resource.data.reviewed == false;
     }
   }
 }

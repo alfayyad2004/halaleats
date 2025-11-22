@@ -5,21 +5,27 @@ import { AppHeader } from '@/components/app-header';
 import { ScannerView } from '@/components/scanner-view';
 import { ResultsView } from '@/components/results-view';
 import { IngredientScannerView } from '@/components/ingredient-scanner-view';
+import { SubmitReviewView } from '@/components/submit-review-view';
 import type { ScanResult, ScanError } from '@/app/actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Barcode, ScanText } from 'lucide-react';
 import { HalalEatsLogo } from '@/components/halal-eats-logo';
 
-export type PageState = 'selection' | 'scanning_barcode' | 'scanning_ingredients' | 'showing_results';
+export type PageState = 'selection' | 'scanning_barcode' | 'scanning_ingredients' | 'showing_results' | 'submit_review';
 
 export default function Home() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [pageState, setPageState] = useState<PageState>('selection');
+  const [unrecognizedBarcode, setUnrecognizedBarcode] = useState<string | null>(null);
 
   const handleScanResponse = (result: ScanResult | ScanError) => {
     if ('error' in result) {
-      // Error is handled by the component via toast
+      if (result.error === 'Product Not Found' && result.barcode) {
+        setUnrecognizedBarcode(result.barcode);
+        setPageState('submit_review');
+      }
+      // Other errors are handled by the component via toast
       return;
     } else {
       setScanResult(result);
@@ -34,6 +40,7 @@ export default function Home() {
 
   const handleReset = () => {
     setScanResult(null);
+    setUnrecognizedBarcode(null);
     setPageState('selection');
   };
   
@@ -70,6 +77,8 @@ export default function Home() {
         return <IngredientScannerView onScanSuccess={handleIngredientScanSuccess} onReset={handleReset} />;
       case 'showing_results':
         return <ResultsView result={scanResult!} onReset={handleReset} />;
+      case 'submit_review':
+        return <SubmitReviewView barcode={unrecognizedBarcode!} onSubmitted={handleReset} onReset={handleReset} />;
       default:
         return <ScannerView onScanResponse={handleScanResponse} onReset={handleReset} />;
     }

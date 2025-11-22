@@ -8,4 +8,5 @@ export type UnrecognizedProduct = {
     reviewed: boolean;
     productName?: string;
     ingredients?: string;
+    submittedByEmail?: string;
 };

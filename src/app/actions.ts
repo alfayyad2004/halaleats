@@ -46,11 +46,10 @@ export async function scanBarcodeAction(
   try {
     const productName = await getProductName(barcode);
     if (productName === 'Product not found.') {
-        // Asynchronously add the barcode to the unrecognized products list
-        addUnrecognizedProduct(barcode);
+        // Return a specific error to let the UI handle submission
         return {
             error: 'Product Not Found',
-            message: "We couldn't find a product with that barcode. We've logged it for review.",
+            message: "We couldn't find a product with that barcode. Would you like to submit it for review?",
             barcode: barcode,
         }
     }
@@ -120,5 +119,40 @@ export async function scanIngredientsAction(
       error: 'Server Error',
       message: 'An unexpected error occurred while analyzing the image. Please try again.',
     };
+  }
+}
+
+const SubmitReviewSchema = z.object({
+  barcode: z.string().min(1),
+  email: z.string().email().optional().or(z.literal('')),
+});
+
+export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
+  const validatedFields = SubmitReviewSchema.safeParse({
+    barcode: formData.get('barcode'),
+    email: formData.get('email'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      message: validatedFields.error.flatten().fieldErrors.email?.join(', ') || 'Invalid data.',
+    };
+  }
+
+  const { barcode, email } = validatedFields.data;
+  
+  try {
+    await addUnrecognizedProduct(barcode, email);
+    return {
+      success: true,
+      message: "Thank you for your submission! We'll review it shortly.",
+    };
+  } catch(e) {
+    console.error(e);
+    return {
+      success: false,
+      message: "There was an error submitting your review. Please try again.",
+    }
   }
 }
