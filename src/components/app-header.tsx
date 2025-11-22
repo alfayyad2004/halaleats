@@ -17,7 +17,7 @@ import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 
 export function AppHeader() {
-  const { user, auth } = useUser();
+  const { appUser, auth } = useUser();
   return (
     <header className="flex items-center justify-between p-4 border-b bg-card">
       <div className="flex items-center gap-3">
@@ -27,14 +27,16 @@ export function AppHeader() {
         </h1>
       </div>
       <div className='flex items-center gap-2'>
-         {user ? (
+         {appUser ? (
           <>
-            <Link href="/admin">
-              <Button variant="ghost" size="icon">
-                <User className="w-6 h-6" />
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
+            {appUser.role === 'admin' && (
+              <Link href="/admin">
+                <Button variant="ghost" size="icon" title="Admin Dashboard">
+                  <User className="w-6 h-6" />
+                </Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => auth && signOut(auth)} title="Log Out">
               <LogOut className="w-6 h-6" />
             </Button>
           </>
