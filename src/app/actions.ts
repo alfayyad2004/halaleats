@@ -6,8 +6,8 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { classifyProduct } from '@/firebase/firestore/mutations';
-import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
+import { classifyProduct, addUnrecognizedProduct } from '@/firebase/firestore/mutations';
+
 
 export type ScanResult = {
   productName: string;
@@ -144,12 +144,10 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
   const { barcode, email } = validatedFields.data;
   
   try {
-    // Use the secure Genkit flow for submission
-    const result = await submitUnrecognizedProduct({ barcode, submittedByEmail: email || '' });
+    const result = await addUnrecognizedProduct(barcode, email || undefined);
     return result;
   } catch(e) {
     console.error('Error in submitReviewAction:', e);
-    // Cast to 'any' to check for a 'message' property
     const error = e as any;
     return {
       success: false,

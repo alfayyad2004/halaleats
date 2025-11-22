@@ -12,21 +12,18 @@ export async function addUnrecognizedProduct(barcode: string, email?: string) {
     }
 
     const productsRef = collection(firestore, "unrecognizedProducts");
-    // Query to check if an identical barcode has already been submitted and is pending review.
     const q = query(productsRef, where("barcode", "==", barcode), where("reviewed", "==", false));
 
     try {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            // A pending review for this barcode already exists.
             return {
-                success: true, // Not a failure, just a duplicate submission.
+                success: true,
                 message: 'This product has already been submitted for review. Thank you!',
             };
         }
 
-        // No pending review found, so add the new product.
         const newProductData = {
             barcode,
             createdAt: serverTimestamp(),
@@ -34,23 +31,21 @@ export async function addUnrecognizedProduct(barcode: string, email?: string) {
             submittedByEmail: email || '',
         };
 
-        await addDoc(productsRef, newProductData);
+        const docRef = await addDoc(productsRef, newProductData);
 
         return {
             success: true,
             message: "Thank you for your submission! We'll review it shortly.",
         };
     } catch (serverError: any) {
-        // This will catch permission errors on either getDocs or addDoc
-        const operation = serverError.message.includes('permission-denied') ? 'list' : 'create';
+        const operation = serverError.code === 'permission-denied' ? (serverError.message.includes('list') ? 'list' : 'create') : 'write';
         const permissionError = new FirestorePermissionError({
             path: productsRef.path,
             operation: operation,
-            requestResourceData: operation === 'create' ? { barcode, email } : undefined,
+            requestResourceData: { barcode, email },
         });
         errorEmitter.emit('permission-error', permissionError);
         
-        // Re-throw to be caught by the server action
         throw serverError;
     }
 }
@@ -72,13 +67,11 @@ export function createUserProfile(user: User) {
         role: 'user' // Default role for new users
     };
 
-    // Do not await. Let the UI continue and handle the error in the background.
     setDoc(userDocRef, userData, { merge: true })
         .catch((serverError) => {
-            // Create a rich, contextual error and emit it globally.
             const permissionError = new FirestorePermissionError({
                 path: userDocRef.path,
-                operation: 'write', 
+                operation: 'create',
                 requestResourceData: userData,
             });
             errorEmitter.emit('permission-error', permissionError);
@@ -102,7 +95,6 @@ export function classifyProduct(
         reviewed: true,
     };
 
-    // Return the promise from updateDoc
     return updateDoc(productRef, updatedData)
         .catch((serverError) => {
             const permissionError = new FirestorePermissionError({
@@ -111,7 +103,6 @@ export function classifyProduct(
                 requestResourceData: updatedData,
             });
             errorEmitter.emit('permission-error', permissionError);
-            // Re-throw the original server error so the calling action knows about the failure.
             throw serverError;
         });
 }

@@ -23,10 +23,10 @@ service cloud.firestore {
     }
     
     // Admins can perform all actions on unrecognized products.
-    // Regular users can only read the list. All write operations must go through the secure flow.
+    // Regular authenticated users can create new submissions and read the list (to check for duplicates).
     match /unrecognizedProducts/{productId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow read, create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
   }
 }
