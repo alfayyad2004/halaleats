@@ -12,10 +12,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users can only read and write to their own profile
+    // Users can create their own profile, and can only read/update their own.
     match /users/{userId} {
-      allow create, read: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow create: if request.auth.uid == userId;
+      allow read, update: if isOwner(userId);
     }
     
     // Admins can read and write to the unrecognized products collection

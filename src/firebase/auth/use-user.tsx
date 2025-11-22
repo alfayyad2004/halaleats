@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-import { useAuth, useFirestore } from '../';
+import { useAuth } from '../';
+import { createUserProfile } from '../firestore/mutations';
 
 // A custom type that extends the Firebase User type with a `role` property.
 export type AppUser = User & {
@@ -33,14 +34,16 @@ export function useUser() {
       setUser(user);
 
       if (user) {
-        // Listen for changes to the user's profile document in Firestore
-        // to get the custom role claim.
         const userDocRef = doc(firestore, 'users', user.uid);
-        const unsub = onSnapshot(userDocRef, (doc) => {
+        const unsub = onSnapshot(userDocRef, async (doc) => {
           if (doc.exists()) {
             const data = doc.data();
             setAppUser({ ...user, role: data.role || 'user' } as AppUser);
           } else {
+            // Document doesn't exist, so create it for the new user.
+            await createUserProfile(user);
+            // The snapshot listener will pick up the new document and update the state.
+            // We set a temporary state here to avoid flicker.
             setAppUser({ ...user, role: 'user' } as AppUser);
           }
           setLoading(false);
