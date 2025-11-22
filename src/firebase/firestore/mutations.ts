@@ -13,9 +13,18 @@ export async function addUnrecognizedProduct(barcode: string, email?: string) {
     }
 
     const productsRef = collection(firestore, "unrecognizedProducts");
-
     const q = query(productsRef, where("barcode", "==", barcode), where("reviewed", "==", false));
-    const querySnapshot = await getDocs(q);
+
+    const querySnapshot = await getDocs(q).catch((serverError) => {
+        // This is the read operation to check for duplicates. It might fail if rules are restrictive.
+        const permissionError = new FirestorePermissionError({
+            path: productsRef.path,
+            operation: 'list', // getDocs is a 'list' operation
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error checking for existing unrecognized product: ", serverError);
+        throw serverError; // Re-throw to be caught by the server action
+    });
 
     if (querySnapshot.empty) {
         const newProductData = {
