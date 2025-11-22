@@ -6,8 +6,20 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
 import { classifyProduct } from '@/firebase/firestore/mutations';
+import * as admin from 'firebase-admin';
+
+// Initialize Firebase Admin SDK
+// This needs to be done once per server instance.
+if (!admin.apps.length) {
+    try {
+        // When deployed to App Hosting, the service account credentials will be
+        // automatically available in the environment via Application Default Credentials.
+        admin.initializeApp();
+    } catch (e) {
+        console.error('CRITICAL: Firebase Admin initialization failed in actions.ts.', e);
+    }
+}
 
 
 export type ScanResult = {
@@ -141,20 +153,50 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
             message: 'Invalid data provided. Please check the form and try again.',
         };
     }
-
-    try {
-        const result = await submitUnrecognizedProduct({
-          barcode: validatedFields.data.barcode,
-          submittedByEmail: validatedFields.data.email,
-        });
-
-        return result;
-
-    } catch (error: any) {
-        console.error("Error in submitReviewAction calling mutation:", error);
+    
+    // Ensure the admin app is available.
+    if (!admin.apps.length) {
+        console.error("Firebase Admin SDK is not initialized. Cannot submit for review.");
         return {
             success: false,
-            message: error.message || 'A server error occurred while submitting the product.',
+            message: "The server is not configured correctly. Please contact support.",
+        };
+    }
+
+    const { barcode, email } = validatedFields.data;
+    const firestore = admin.firestore();
+    const productsRef = firestore.collection("unrecognizedProducts");
+
+    try {
+        const q = productsRef.where("barcode", "==", barcode);
+        const querySnapshot = await q.get();
+
+        if (!querySnapshot.empty) {
+            return {
+                success: true,
+                message: "Thank you for your submission! This product is already in our review queue.",
+            };
+        }
+
+        const newProductData = {
+            barcode,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            reviewed: false,
+            submittedByEmail: email || '',
+        };
+
+        await productsRef.add(newProductData);
+
+        return {
+            success: true,
+            message: "Thank you for your submission! We'll review it shortly.",
+        };
+
+    } catch (error: any) {
+        console.error("Error in submitReviewAction interacting with Firestore:", error);
+        return {
+            success: false,
+            message: 'A server error occurred while submitting the product.',
         };
     }
 }
@@ -179,11 +221,25 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
             message: 'Invalid data provided.',
         };
     }
+    
+    if (!admin.apps.length) {
+        console.error("Firebase Admin SDK is not initialized. Cannot classify product.");
+        return {
+            success: false,
+            message: "The server is not configured correctly.",
+        };
+    }
 
     const { id, productName, ingredients } = validatedFields.data;
+    const firestore = admin.firestore();
+    const productRef = firestore.collection('unrecognizedProducts').doc(id);
 
     try {
-        await classifyProduct(id, productName, ingredients);
+        await productRef.update({
+            productName,
+            ingredients,
+            reviewed: true,
+        });
         return {
             success: true,
             message: 'Product has been classified successfully!',
