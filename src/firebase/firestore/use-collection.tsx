@@ -31,17 +31,24 @@ interface UseCollectionOptions {
     value: any;
   };
   limit?: number;
+  disabled?: boolean; // Add a disabled option
 }
 
 export function useCollection<T>(collectionName: string, options: UseCollectionOptions = {}) {
   const { firestore } = useFirestore();
   const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!options.disabled);
   const [error, setError] = useState<FirestoreError | null>(null);
 
   useEffect(() => {
-    if (!firestore) return;
+    // If the hook is disabled, do nothing.
+    if (!firestore || options.disabled) {
+      setLoading(false);
+      setData([]); // Clear data when disabled
+      return;
+    }
 
+    setLoading(true);
     let collectionRef: Query | CollectionReference = collection(firestore, collectionName);
 
     if (options.filter) {
@@ -84,7 +91,7 @@ export function useCollection<T>(collectionName: string, options: UseCollectionO
     return () => unsubscribe();
   // We stringify the options to avoid re-running the effect on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionName, firestore, JSON.stringify(options)]);
+  }, [collectionName, firestore, JSON.stringify(options), options.disabled]);
 
   return { data, loading, error };
 }

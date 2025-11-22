@@ -14,10 +14,13 @@ import { ClassifyProductDialog } from '@/components/classify-product-dialog';
 
 
 export default function AdminPage() {
-  const { appUser, loading: userLoading } = useUser();
+  const { appUser, userLoading } = useUser();
   const router = useRouter();
+
+  // Conditionally fetch data only if the user is an admin.
   const { data: products, loading: productsLoading } = useCollection<UnrecognizedProduct>('unrecognizedProducts', {
-    sort: { field: 'createdAt', order: 'desc' }
+    sort: { field: 'createdAt', order: 'desc' },
+    disabled: !appUser || appUser.role !== 'admin'
   });
 
   useEffect(() => {
