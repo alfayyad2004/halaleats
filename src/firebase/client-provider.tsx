@@ -5,7 +5,6 @@ import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
 import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import { FirebaseProvider, FirebaseContextType } from './provider';
-import { firebaseConfig } from './config';
 import { Loader } from 'lucide-react';
 
 // Create a context for the Firebase app instance.
@@ -22,17 +21,32 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     // Initialize Firebase on the client side where process.env is available.
-    if (typeof window !== 'undefined') {
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const firestore = getFirestore(app);
-      setServices({
-        auth,
-        firestore,
-        firebaseApp: app,
-      });
+    if (typeof window !== 'undefined' && !services) {
+        const firebaseConfig = {
+            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+            appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        };
+
+        if (!firebaseConfig.apiKey) {
+            console.error("Firebase API Key is missing. Please check your .env.local file.");
+            return;
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const firestore = getFirestore(app);
+        
+        setServices({
+            auth,
+            firestore,
+            firebaseApp: app,
+        });
     }
-  }, []);
+  }, [services]);
 
   if (!services) {
     return (
