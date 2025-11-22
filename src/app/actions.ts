@@ -7,7 +7,7 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { classifyProduct, submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
+import { classifyProduct as classifyProductMutation } from '@/firebase/firestore/mutations';
 
 
 export type ScanResult = {
@@ -124,42 +124,6 @@ export async function scanIngredientsAction(
   }
 }
 
-const SubmitReviewSchema = z.object({
-  barcode: z.string().min(1),
-  email: z.string().email().optional().or(z.literal('')),
-});
-
-export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
-    const validatedFields = SubmitReviewSchema.safeParse({
-        barcode: formData.get('barcode'),
-        email: formData.get('email'),
-    });
-
-    if (!validatedFields.success) {
-        return {
-            success: false,
-            message: 'Invalid data provided. Please check the form and try again.',
-        };
-    }
-
-    const { barcode, email } = validatedFields.data;
-
-    try {
-        await submitUnrecognizedProduct(barcode, email);
-        return {
-            success: true,
-            message: "Thank you for your submission! We'll review it shortly.",
-        };
-
-    } catch (error: any) {
-        console.error("Error in submitReviewAction:", error);
-        return {
-            success: false,
-            message: error.message || 'A server error occurred while submitting for review.',
-        };
-    }
-}
-
 
 const ClassifyProductSchema = z.object({
     id: z.string().min(1),
@@ -184,7 +148,7 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
     const { id, productName, ingredients } = validatedFields.data;
     
     try {
-        await classifyProduct(id, productName, ingredients);
+        await classifyProductMutation(id, productName, ingredients);
         return {
             success: true,
             message: 'Product has been classified successfully!',

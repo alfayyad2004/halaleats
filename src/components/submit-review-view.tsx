@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, Send, Loader, RotateCcw } from 'lucide-react';
-import { submitReviewAction } from '@/app/actions';
+import { submitReviewAction } from '@/app/actions/submit-unrecognized-product';
 import { useToast } from '@/hooks/use-toast';
 
 interface SubmitReviewViewProps {
@@ -23,7 +23,7 @@ export function SubmitReviewView({ barcode, onSubmitted, onReset }: SubmitReview
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message) {
+    if (state?.message) {
       if (state.success) {
         toast({
           title: 'Submission Successful',
@@ -65,7 +65,7 @@ export function SubmitReviewView({ barcode, onSubmitted, onReset }: SubmitReview
         </CardContent>
         <CardFooter className="flex-col gap-2">
             <SubmitButton />
-            <Button variant="ghost" onClick={onReset} className="w-full">
+            <Button type="button" variant="ghost" onClick={onReset} className="w-full">
                 <RotateCcw className="mr-2" /> Cancel
             </Button>
         </CardFooter>
