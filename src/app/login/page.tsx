@@ -37,6 +37,12 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
+      // Don't show a toast for this common scenario
+      if (error.code === 'auth/popup-closed-by-user') {
+          console.log('Sign-in popup closed by user.');
+          return;
+      }
+
       console.error('Error during sign-in:', error);
       if (error.code === 'auth/configuration-not-found') {
           toast({
