@@ -83,7 +83,8 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
       isScanningRef.current = true;
       const startScan = async () => {
         try {
-          await codeReader.getVideoInputDevices();
+          // The decodeFromVideoDevice function handles getting video inputs and permissions.
+          // No need to call getVideoInputDevices() separately.
           setHasCameraPermission(true);
           if (videoRef.current) {
              controlsRef.current = await codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
