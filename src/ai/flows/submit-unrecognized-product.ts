@@ -10,8 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase-admin/firestore';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 
 const SubmitUnrecognizedProductInputSchema = z.object({
   barcode: z.string().describe('The barcode of the unrecognized product.'),
@@ -30,6 +30,11 @@ export async function submitUnrecognizedProduct(input: SubmitUnrecognizedProduct
     return submitUnrecognizedProductFlow(input);
 }
 
+// Initialize Firebase Admin SDK if not already initialized.
+// This is necessary for server-side flows that interact with Firebase.
+if (getApps().length === 0) {
+  initializeApp();
+}
 
 const submitUnrecognizedProductFlow = ai.defineFlow(
   {
@@ -40,12 +45,12 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
   async ({ barcode, email }) => {
     // This flow runs on the server with admin privileges, so it can safely query the database.
     const db = getFirestore();
-    const productsRef = collection(db, 'unrecognizedProducts');
+    const productsRef = db.collection('unrecognizedProducts');
     
     // Check if a product with the same barcode is already pending review.
-    const q = query(productsRef, where('barcode', '==', barcode), where('reviewed', '==', false));
+    const q = productsRef.where('barcode', '==', barcode).where('reviewed', '==', false);
     
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await q.get();
 
     if (!querySnapshot.empty) {
         return {
@@ -57,12 +62,12 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
     // Add the new product to the collection.
     const newProductData = {
         barcode,
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.now(),
         reviewed: false,
         submittedByEmail: email || '', // Ensure the field exists even if empty
     };
 
-    await addDoc(productsRef, newProductData);
+    await productsRef.add(newProductData);
 
     return {
         success: true,
