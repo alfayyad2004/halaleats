@@ -35,13 +35,13 @@ export function useUser() {
 
       if (user) {
         const userDocRef = doc(firestore, 'users', user.uid);
-        const unsub = onSnapshot(userDocRef, async (doc) => {
+        const unsub = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
             const data = doc.data();
             setAppUser({ ...user, role: data.role || 'user' } as AppUser);
           } else {
             // Document doesn't exist, so create it for the new user.
-            await createUserProfile(user);
+            createUserProfile(user);
             // The snapshot listener will pick up the new document and update the state.
             // We set a temporary state here to avoid flicker.
             setAppUser({ ...user, role: 'user' } as AppUser);

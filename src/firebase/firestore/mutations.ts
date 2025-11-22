@@ -50,7 +50,7 @@ export async function addUnrecognizedProduct(barcode: string, email?: string) {
     }
 }
 
-export async function createUserProfile(user: User) {
+export function createUserProfile(user: User) {
     const { firestore } = getFirebase();
     if (!firestore) {
         console.error("Firestore not initialized");
@@ -66,15 +66,16 @@ export async function createUserProfile(user: User) {
         role: 'user' // Default role for new users
     };
 
-    setDoc(userDocRef, userData, { merge: true })
+    // Do not await. Let the UI continue and handle the error in the background.
+    setDoc(userDocRef, userData)
         .catch((serverError) => {
+            // Create a rich, contextual error and emit it globally.
             const permissionError = new FirestorePermissionError({
                 path: userDocRef.path,
-                operation: 'write',
+                operation: 'create', // Explicitly a 'create' operation for a new user profile
                 requestResourceData: userData,
             });
             errorEmitter.emit('permission-error', permissionError);
-            console.error("Error creating user profile: ", serverError);
         });
 }
 
