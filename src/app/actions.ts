@@ -9,17 +9,20 @@ import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
 import * as admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK
-// This needs to be done once per server instance.
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp();
-  } catch (e) {
-    console.error('CRITICAL: Firebase Admin initialization error in actions.ts.', e);
+// This function ensures Firebase Admin is initialized and returns the Firestore instance.
+function getFirestoreAdmin() {
+  if (!admin.apps.length) {
+    try {
+      admin.initializeApp();
+    } catch (e) {
+      console.error('CRITICAL: Firebase Admin initialization error in actions.ts.', e);
+      // This will cause the action to fail, which is the desired behavior
+      // if the admin SDK can't be initialized.
+      throw new Error('Server configuration error.');
+    }
   }
+  return admin.firestore();
 }
-
-const firestore = admin.firestore();
 
 
 export type ScanResult = {
@@ -142,9 +145,7 @@ const SubmitReviewSchema = z.object({
 });
 
 export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
-    if (!admin.apps.length) {
-        return { success: false, message: 'The server is not configured correctly.' };
-    }
+    const firestore = getFirestoreAdmin();
 
     const validatedFields = SubmitReviewSchema.safeParse({
         barcode: formData.get('barcode'),
@@ -203,10 +204,8 @@ const ClassifyProductSchema = z.object({
 });
 
 export async function classifyProductAction(prevState: any, formData: FormData) {
-    if (!admin.apps.length) {
-        return { success: false, message: 'The server is not configured correctly.' };
-    }
-
+    const firestore = getFirestoreAdmin();
+    
     const validatedFields = ClassifyProductSchema.safeParse({
         id: formData.get('id'),
         productName: formData.get('productName'),
