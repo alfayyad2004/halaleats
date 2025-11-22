@@ -24,17 +24,25 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
+    // If loading is finished and the user is not an admin, redirect them.
     if (!userLoading && (!appUser || appUser.role !== 'admin')) {
       router.push('/');
     }
   }, [appUser, userLoading, router]);
 
-  if (userLoading || !appUser || appUser.role !== 'admin') {
+  // While checking auth, show a loader.
+  if (userLoading) {
     return (
         <div className="min-h-screen flex items-center justify-center">
             <Loader className="animate-spin" />
         </div>
     );
+  }
+
+  // If after loading, there's still no admin user, don't render the page.
+  // The useEffect above will handle the redirect.
+  if (!appUser || appUser.role !== 'admin') {
+      return null;
   }
 
   const reviewedProducts = products.filter(p => p.reviewed);
