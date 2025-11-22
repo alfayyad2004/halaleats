@@ -1,8 +1,9 @@
 'use client';
-import { collection, addDoc, serverTimestamp, getFirestore, query, where, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebase } from "..";
 import type { User } from "firebase/auth";
-import type { UnrecognizedProduct } from "@/lib/types";
+import { errorEmitter } from '../error-emitter';
+import { FirestorePermissionError } from '../errors';
 
 export async function addUnrecognizedProduct(barcode: string, email?: string) {
     const { firestore } = getFirebase();
@@ -13,22 +14,28 @@ export async function addUnrecognizedProduct(barcode: string, email?: string) {
 
     const productsRef = collection(firestore, "unrecognizedProducts");
 
-    // Check if an un-reviewed product with the same barcode already exists
     const q = query(productsRef, where("barcode", "==", barcode), where("reviewed", "==", false));
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        try {
-            await addDoc(productsRef, {
-                barcode,
-                createdAt: serverTimestamp(),
-                reviewed: false,
-                submittedByEmail: email || '',
+        const newProductData = {
+            barcode,
+            createdAt: serverTimestamp(),
+            reviewed: false,
+            submittedByEmail: email || '',
+        };
+        addDoc(productsRef, newProductData)
+            .catch((serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: productsRef.path,
+                    operation: 'create',
+                    requestResourceData: newProductData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                console.error("Error adding unrecognized product: ", serverError);
+                throw serverError; // Re-throw to be caught by the server action
             });
-        } catch (e) {
-            console.error("Error adding unrecognized product: ", e);
-            throw e; // Re-throw to be caught by the server action
-        }
+
     } else {
         console.log(`Barcode ${barcode} already submitted for review.`);
     }
@@ -42,44 +49,53 @@ export async function createUserProfile(user: User) {
     }
 
     const userDocRef = doc(firestore, "users", user.uid);
+    const userData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        role: 'user' // Default role for new users
+    };
 
-    try {
-        await setDoc(userDocRef, {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            role: 'user' // Default role for new users
-        }, { merge: true });
-    } catch (e) {
-        console.error("Error creating user profile: ", e);
-    }
+    setDoc(userDocRef, userData, { merge: true })
+        .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'write',
+                requestResourceData: userData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            console.error("Error creating user profile: ", serverError);
+        });
 }
 
-export async function classifyProduct(
+export function classifyProduct(
   id: string,
   productName: string,
   ingredients: string
-): Promise<void> {
+): void {
     const { firestore } = getFirebase();
     if (!firestore) {
         throw new Error("Firestore not initialized");
     }
 
     const productRef = doc(firestore, 'unrecognizedProducts', id);
+    const updatedData = {
+        productName,
+        ingredients,
+        reviewed: true,
+    };
 
-    try {
-        await updateDoc(productRef, {
-            productName,
-            ingredients,
-            reviewed: true,
+    updateDoc(productRef, updatedData)
+        .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: productRef.path,
+                operation: 'update',
+                requestResourceData: updatedData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            // We still throw here so the component's error handling can catch it
+            // and show a toast to the user.
+            throw serverError;
         });
-        
-        // TODO: In a real app, you would add this to a primary 'products' collection.
-        // For now, we just mark it as reviewed.
-
-    } catch (error) {
-        console.error("Error updating product:", error);
-        throw new Error("Failed to classify product.");
-    }
 }
