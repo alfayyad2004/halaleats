@@ -19,7 +19,6 @@ async function fetchProductFromOpenFoodFacts(barcode: string): Promise<{ name: s
     }
 }
 
-
 export async function getProductIngredients(barcode: string): Promise<string> {
   const onlineProduct = await fetchProductFromOpenFoodFacts(barcode);
   if (onlineProduct) {

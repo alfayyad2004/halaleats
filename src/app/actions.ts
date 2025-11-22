@@ -6,6 +6,7 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
+import { addUnrecognizedProduct } from '@/firebase/firestore/mutations';
 
 export type ScanResult = {
   productName: string;
@@ -45,9 +46,11 @@ export async function scanBarcodeAction(
   try {
     const productName = await getProductName(barcode);
     if (productName === 'Product not found.') {
+        // Asynchronously add the barcode to the unrecognized products list
+        addUnrecognizedProduct(barcode);
         return {
             error: 'Product Not Found',
-            message: "We couldn't find a product with that barcode. Please try a different one.",
+            message: "We couldn't find a product with that barcode. We've logged it for review.",
             barcode: barcode,
         }
     }

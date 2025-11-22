@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique ID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's profile picture."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "admin",
+            "user"
+          ],
+          "description": "The user's role."
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "role"
+      ]
+    },
+    "UnrecognizedProduct": {
+      "title": "Unrecognized Product",
+      "description": "Represents a product that was scanned but not found in the database.",
+      "type": "object",
+      "properties": {
+        "barcode": {
+          "type": "string",
+          "description": "The barcode of the unrecognized product."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the product was first scanned."
+        },
+        "reviewed": {
+          "type": "boolean",
+          "description": "Flag indicating if the product has been reviewed by an admin."
+        },
+        "productName": {
+          "type": "string",
+          "description": "The corrected product name provided by an admin."
+        },
+        "ingredients": {
+          "type": "string",
+          "description": "The corrected ingredients list provided by an admin."
+        }
+      },
+      "required": [
+        "barcode",
+        "createdAt",
+        "reviewed"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profile information."
+    },
+    "/unrecognizedProducts/{productId}": {
+      "schema": {
+        "$ref": "#/entities/UnrecognizedProduct"
+      },
+      "description": "Collection of products that were not found during a scan and require admin review."
+    }
+  }
+}
