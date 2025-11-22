@@ -57,7 +57,27 @@ export default function LoginPage() {
               ),
               duration: 10000,
           });
-      } else {
+      } else if (error.code === 'auth/unauthorized-domain') {
+          toast({
+              variant: 'destructive',
+              title: 'Domain Not Authorized',
+              description: (
+                  <div>
+                      <p>This domain is not authorized for sign-in. Please add 'localhost' to the authorized domains in your Firebase console.</p>
+                      <a
+                          href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/authentication/settings`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                      >
+                          Click here to go to Authentication Settings.
+                      </a>
+                  </div>
+              ),
+              duration: 10000,
+          });
+      }
+      else {
           toast({
               variant: 'destructive',
               title: 'Sign-In Error',
