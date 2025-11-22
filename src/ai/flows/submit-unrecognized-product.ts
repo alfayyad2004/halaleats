@@ -14,14 +14,14 @@ import { z } from 'genkit';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK only if it hasn't been already.
-// This is a safe check to prevent re-initialization errors.
+// This is a safe check to prevent re-initialization errors and should run once per server instance.
 if (!admin.apps.length) {
     try {
         // When deployed to App Hosting, the service account credentials will be
-        // automatically available in the environment.
+        // automatically available in the environment via Application Default Credentials.
         admin.initializeApp();
     } catch (e) {
-        console.error('Firebase Admin initialization error in submit-unrecognized-product flow. This might happen during local development if credentials are not set.', e);
+        console.error('CRITICAL: Firebase Admin initialization error in submit-unrecognized-product flow.', e);
     }
 }
 
@@ -49,6 +49,7 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
     
     // Ensure the admin app is available. If not, it means initialization failed.
     if (!admin.apps.length) {
+        // This will be caught by the action and shown to the user.
         throw new Error("Firebase Admin SDK not initialized. Cannot connect to the database. Check server logs for initialization errors.");
     }
         
