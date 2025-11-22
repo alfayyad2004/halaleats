@@ -12,14 +12,8 @@ import * as admin from 'firebase-admin';
 // This function ensures Firebase Admin is initialized and returns the Firestore instance.
 function getFirestoreAdmin() {
   if (!admin.apps.length) {
-    try {
-      admin.initializeApp();
-    } catch (e) {
-      console.error('CRITICAL: Firebase Admin initialization error in actions.ts.', e);
-      // This will cause the action to fail, which is the desired behavior
-      // if the admin SDK can't be initialized.
-      throw new Error('Server configuration error.');
-    }
+    // When deployed on App Hosting, initializeApp() discovers credentials automatically.
+    admin.initializeApp();
   }
   return admin.firestore();
 }
@@ -191,7 +185,7 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
         console.error("Error in submitReviewAction interacting with Firestore:", error);
         return {
             success: false,
-            message: 'The server is not configured correctly.',
+            message: error.message || 'A server error occurred while writing to the database.',
         };
     }
 }
@@ -236,7 +230,7 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
         console.error("Error in classifyProductAction:", e);
         return {
             success: false,
-            message: 'The server is not configured correctly.',
+            message: e.message || 'An error occurred while classifying the product.',
         };
     }
 }
