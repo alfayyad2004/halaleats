@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { ScanResult, ScanError } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { BrowserMultiFormatReader, BarcodeFormat } from '@zxing/browser';
-import { DecodeHintType } from '@zxing/library';
+import { DecodeHintType, IScannerControls } from '@zxing/library';
 import type { IBrowserCodeReader } from '@zxing/browser';
 
 
@@ -33,6 +33,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const codeReaderRef = useRef<IBrowserCodeReader | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
   const isScanningRef = useRef(false);
 
   const typedState = state as ScanResult | ScanError | undefined;
@@ -65,8 +66,9 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
   }, [typedState]);
   
   const stopCamera = () => {
-    if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
+    if (controlsRef.current) {
+        controlsRef.current.stop();
+        controlsRef.current = null;
     }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -84,7 +86,7 @@ export function ScannerView({ onScanResponse, onReset }: ScannerViewProps) {
           await codeReader.getVideoInputDevices();
           setHasCameraPermission(true);
           if (videoRef.current) {
-             codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+             controlsRef.current = await codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
                 if (result && !detectedBarcode) {
                   setDetectedBarcode(result.getText());
                   stopCamera();
