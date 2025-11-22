@@ -1,10 +1,8 @@
 'use client';
 
-import { FirebaseApp, initializeApp, getApps } from 'firebase/app';
-import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
 import { ReactNode, useEffect, useState } from 'react';
 import { FirebaseProvider, FirebaseContextType } from './provider';
+import { initializeFirebase } from '.';
 import { Loader } from 'lucide-react';
 
 // This is a client-side provider that initializes Firebase and provides the app instance to its children.
@@ -14,47 +12,15 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     // Only run this on the client
-    if (typeof window === 'undefined') {
-      return;
+    if (typeof window !== 'undefined') {
+      try {
+        const { firebaseApp, auth, firestore } = initializeFirebase();
+        setServices({ firebaseApp, auth, firestore });
+      } catch (error: any) {
+        console.error("Firebase initialization failed:", error.message);
+        // Render an error state or handle it as appropriate
+      }
     }
-
-    // Check if Firebase is already initialized
-    if (getApps().length > 0) {
-      const app = getApps()[0];
-      setServices({
-        firebaseApp: app,
-        auth: getAuth(app),
-        firestore: getFirestore(app),
-      });
-      return;
-    }
-    
-    // Initialize Firebase
-    const firebaseConfig = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    };
-    
-    // Validate config
-    if (!firebaseConfig.apiKey) {
-      console.error("Firebase API Key is missing. Please check your .env.local file.");
-      // You might want to render an error state here
-      return;
-    }
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const firestore = getFirestore(app);
-
-    setServices({
-      firebaseApp: app,
-      auth,
-      firestore,
-    });
   }, []);
 
   if (!services) {

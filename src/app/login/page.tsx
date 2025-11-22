@@ -16,11 +16,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!userLoading && appUser) {
-      if (appUser.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/');
-      }
+        // Redirect based on role only if the user object is available.
+        router.push(appUser.role === 'admin' ? '/admin' : '/');
     }
   }, [appUser, userLoading, router]);
 
@@ -36,7 +33,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The useEffect above will handle redirection.
+      // The useEffect above will handle redirection after sign-in state changes.
     } catch (error: any) {
       // Don't show a toast for this common scenario
       if (error.code === 'auth/popup-closed-by-user') {
@@ -93,7 +90,8 @@ export default function LoginPage() {
       }
     }
   };
-
+  
+  // While checking auth or if the user is already logged in (and redirecting), show a loader.
   if (userLoading || appUser) {
     return (
         <div className="min-h-screen flex items-center justify-center">
@@ -102,6 +100,7 @@ export default function LoginPage() {
     );
   }
 
+  // Only show the login form if loading is complete and there's no user.
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
