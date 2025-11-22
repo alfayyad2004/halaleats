@@ -7,19 +7,8 @@ import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
 import * as d from "firebase-admin";
+import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
 
-// Initialize Firebase Admin SDK
-// This ensures we have a single, consistent instance for all actions in this file.
-if (d.apps.length === 0) {
-  // This will automatically use the service account credentials from the environment
-  // when deployed on App Hosting. For local development, you might need to set up
-  // GOOGLE_APPLICATION_CREDENTIALS.
-  try {
-    d.initializeApp();
-  } catch (e) {
-    console.error("Firebase Admin initialization error in actions.ts. Make sure you have the correct server environment setup.", e);
-  }
-}
 
 export type ScanResult = {
   productName: string;
@@ -153,45 +142,19 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
         };
     }
 
-    const { barcode, email } = validatedFields.data;
-
     try {
-        const firestore = d.firestore();
-        const productsRef = firestore.collection("unrecognizedProducts");
+        const result = await submitUnrecognizedProduct({
+          barcode: validatedFields.data.barcode,
+          submittedByEmail: validatedFields.data.email,
+        });
 
-        // Query to check for an existing, unreviewed product with the same barcode.
-        const q = productsRef.where("barcode", "==", barcode);
-        const querySnapshot = await q.get();
+        return result;
 
-        if (!querySnapshot.empty) {
-             // To avoid letting users know if a barcode exists, we can return a generic success message.
-             // This prevents data leakage.
-            return {
-                success: true,
-                message: "Thank you for your submission! If this is a new product, we'll review it shortly.",
-            };
-        }
-
-        // No pending review found, so add the new product.
-        const newProductData = {
-            barcode,
-            createdAt: d.firestore.FieldValue.serverTimestamp(),
-            reviewed: false,
-            submittedByEmail: email || '',
-        };
-
-        await productsRef.add(newProductData);
-
-        return {
-            success: true,
-            message: "Thank you for your submission! We'll review it shortly.",
-        };
     } catch (error: any) {
-        console.error("Error in submitReviewAction:", error);
-        // Do not expose detailed internal errors to the client.
+        console.error("Error in submitReviewAction calling flow:", error);
         return {
             success: false,
-            message: 'A server error occurred while submitting the product. Please try again later.',
+            message: error.message || 'A server error occurred while submitting the product.',
         };
     }
 }
@@ -213,13 +176,16 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
     if (!validatedFields.success) {
         return {
             success: false,
-            message: 'Invalid data provided.',
+message: 'Invalid data provided.',
         };
     }
 
     const { id, productName, ingredients } = validatedFields.data;
 
     try {
+        if (!d.apps.length) {
+          d.initializeApp();
+        }
         const firestore = d.firestore();
         const productRef = firestore.collection('unrecognizedProducts').doc(id);
         
