@@ -23,9 +23,11 @@ service cloud.firestore {
     }
     
     // Admins can perform all actions on unrecognized products.
-    // Regular authenticated users cannot interact with this collection directly.
+    // Authenticated users can create new entries and read the list (to check for duplicates),
+    // but cannot update or delete.
     match /unrecognizedProducts/{productId} {
-      allow read, write: if isAdmin();
+      allow read, update, delete: if isAdmin();
+      allow create: if isAuthenticated();
     }
   }
 }
