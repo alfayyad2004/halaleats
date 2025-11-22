@@ -10,19 +10,19 @@ import { Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
-  const { appUser, auth, loading } = useUser();
+  const { appUser, auth, userLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && appUser) {
+    if (!userLoading && appUser) {
       if (appUser.role === 'admin') {
         router.push('/admin');
       } else {
         router.push('/');
       }
     }
-  }, [appUser, loading, router]);
+  }, [appUser, userLoading, router]);
 
   const handleGoogleSignIn = async () => {
     if (!auth) {
@@ -36,6 +36,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      // The useEffect above will handle redirection.
     } catch (error: any) {
       // Don't show a toast for this common scenario
       if (error.code === 'auth/popup-closed-by-user') {
@@ -69,7 +70,7 @@ export default function LoginPage() {
               title: 'Domain Not Authorized',
               description: (
                   <div>
-                      <p>This domain is not authorized for sign-in. Please add 'localhost' to the authorized domains in your Firebase console.</p>
+                      <p>This domain is not authorized for sign-in. Please add the app's domain to the authorized domains in your Firebase console.</p>
                       <a
                           href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/authentication/settings`}
                           target="_blank"
@@ -93,7 +94,7 @@ export default function LoginPage() {
     }
   };
 
-  if (loading || appUser) {
+  if (userLoading || appUser) {
     return (
         <div className="min-h-screen flex items-center justify-center">
             <Loader className="animate-spin" />

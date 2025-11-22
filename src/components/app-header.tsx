@@ -6,8 +6,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,14 +15,18 @@ import { nonHalalIngredients } from '@/lib/halal-data';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function AppHeader() {
-  const { appUser, auth, loading } = useUser();
+  const { appUser, auth, userLoading } = useUser();
+  const router = useRouter();
 
   const handleLogout = async () => {
     if (auth) {
       await signOut(auth);
-      // The useUser hook will handle redirection automatically
+      // After signing out, the useUser hook will update, and any protected pages
+      // will redirect. We can also force a redirect to the homepage.
+      router.push('/');
     }
   };
 
@@ -35,7 +39,7 @@ export function AppHeader() {
         </h1>
       </Link>
       <div className='flex items-center gap-2'>
-         {appUser && !loading ? (
+         {appUser && !userLoading ? (
           <>
             {appUser.role === 'admin' && (
               <Link href="/admin">
@@ -48,7 +52,7 @@ export function AppHeader() {
               <LogOut className="w-6 h-6" />
             </Button>
           </>
-        ) : !loading && (
+        ) : !userLoading && (
           <Link href="/login">
             <Button variant="ghost" size="sm">Admin Login</Button>
           </Link>

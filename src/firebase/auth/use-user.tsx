@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-import { useAuth } from '../';
+import { useAuth } from '../provider';
 import { createUserProfile } from '../firestore/mutations';
 
 // A custom type that extends the Firebase User type with a `role` property.
@@ -16,7 +16,7 @@ export type AppUser = User & {
  * A hook that provides the currently authenticated user.
  * It also fetches the user's custom claims to determine their role.
  * 
- * @returns An object containing the `AppUser`, `user`, `loading`, `auth` and `firestore` instances.
+ * @returns An object containing the `AppUser`, `user`, `userLoading`, `auth` and `firestore` instances.
  * `AppUser` is a custom type that extends the Firebase User type with a `role` property.
  * `user` is the original Firebase User object.
  */
@@ -24,13 +24,17 @@ export function useUser() {
   const { auth, firestore } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth || !firestore) return;
+    if (!auth || !firestore) {
+      // Firebase might not be initialized yet.
+      // The provider will handle the loading state.
+      return;
+    }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setLoading(true);
+      setUserLoading(true);
       setUser(user);
 
       if (user) {
@@ -46,21 +50,21 @@ export function useUser() {
             // We set a temporary state here to avoid flicker.
             setAppUser({ ...user, role: 'user' } as AppUser);
           }
-          setLoading(false);
+          setUserLoading(false);
         }, (error) => {
           console.error("Error fetching user profile:", error);
           setAppUser({ ...user, role: 'user' } as AppUser); // Fallback to 'user' role on error
-          setLoading(false);
+          setUserLoading(false);
         });
         return () => unsub();
       } else {
         setAppUser(null);
-        setLoading(false);
+        setUserLoading(false);
       }
     });
 
     return () => unsubscribe();
   }, [auth, firestore]);
 
-  return { appUser, user, loading, auth, firestore };
+  return { appUser, user, userLoading, auth, firestore };
 }

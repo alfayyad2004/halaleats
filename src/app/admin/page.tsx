@@ -19,6 +19,7 @@ export default function AdminPage() {
   // Conditionally fetch data only if the user is an admin.
   const { data: products, loading: productsLoading } = useCollection<UnrecognizedProduct>('unrecognizedProducts', {
     sort: { field: 'createdAt', order: 'desc' },
+    // Disable the query until we know for sure the user is an admin.
     disabled: !appUser || appUser.role !== 'admin'
   });
 
