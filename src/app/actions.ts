@@ -6,7 +6,8 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import { classifyProduct, addUnrecognizedProduct } from '@/firebase/firestore/mutations';
+import * as admin from 'firebase-admin';
+import { classifyProduct } from '@/firebase/firestore/mutations';
 
 
 export type ScanResult = {
@@ -26,6 +27,16 @@ const ImageScanSchema = z.object({
   photoDataUri: z.string().min(1, { message: 'Image data cannot be empty.' }),
   barcode: z.string().optional(),
 });
+
+// Helper to initialize Firebase Admin SDK
+function initializeAdminApp() {
+    if (admin.apps.length === 0) {
+        // This will use the Google Application Default Credentials
+        // on the server environment.
+        admin.initializeApp();
+    }
+    return admin.firestore();
+}
 
 export async function scanBarcodeAction(
   prevState: any,
@@ -137,21 +148,47 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
   if (!validatedFields.success) {
     return {
       success: false,
-      message: validatedFields.error.flatten().fieldErrors.email?.join(', ') || 'Invalid data.',
+      message: validatedFields.error.flatten().fieldErrors.barcode?.join(', ') || 'Invalid data.',
     };
   }
 
   const { barcode, email } = validatedFields.data;
   
   try {
-    const result = await addUnrecognizedProduct(barcode, email || undefined);
-    return result;
-  } catch(e) {
-    console.error('Error in submitReviewAction:', e);
-    const error = e as any;
+    const firestore = initializeAdminApp();
+    const productsRef = firestore.collection("unrecognizedProducts");
+
+    // Check for existing, unreviewed product
+    const q = productsRef.where("barcode", "==", barcode).where("reviewed", "==", false);
+    const querySnapshot = await q.get();
+
+    if (!querySnapshot.empty) {
+        return {
+            success: true, 
+            message: 'This product has already been submitted for review. Thank you!',
+        };
+    }
+
+    // Add new product for review
+    const newProductData = {
+        barcode,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        reviewed: false,
+        submittedByEmail: email || '',
+    };
+    await productsRef.add(newProductData);
+
     return {
-      success: false,
-      message: error.message || "There was a server error submitting your review. Please try again.",
+        success: true,
+        message: "Thank you for your submission! We'll review it shortly.",
+    };
+  } catch(error) {
+    console.error('Error in submitReviewAction:', error);
+    const err = error as any;
+    // Do not expose detailed internal errors to the client.
+    return {
+        success: false,
+        message: err.message || "A server error occurred while submitting the product.",
     }
   }
 }
