@@ -11,18 +11,22 @@ service cloud.firestore {
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
     // Users can create their own profile, read it, and update it.
     match /users/{userId} {
-      allow create: if request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
       allow read, update: if isOwner(userId);
     }
     
     // Admins can perform all actions on unrecognized products.
-    // Regular users cannot directly interact with this collection, forcing submissions
-    // through the secure server-side flow.
+    // Regular users can only create (submit) a new product for review and read the list (to check for duplicates).
     match /unrecognizedProducts/{productId} {
-      allow read, list, update, delete, create: if isAdmin();
+      allow create, list: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
     }
   }
 }

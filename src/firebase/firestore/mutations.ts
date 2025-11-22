@@ -5,52 +5,56 @@ import type { User } from "firebase/auth";
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
 
-// This function is no longer used for adding products, as it's been replaced by a secure Genkit flow.
-// It's kept here for reference or potential future admin-specific use.
 export async function addUnrecognizedProduct(barcode: string, email?: string) {
     const { firestore } = getFirebase();
     if (!firestore) {
-        console.error("Firestore not initialized");
-        return;
+        throw new Error("Firestore not initialized");
     }
 
     const productsRef = collection(firestore, "unrecognizedProducts");
+    // Query to check if an identical barcode has already been submitted and is pending review.
     const q = query(productsRef, where("barcode", "==", barcode), where("reviewed", "==", false));
 
-    const querySnapshot = await getDocs(q).catch((serverError) => {
-        // This is the read operation to check for duplicates. It might fail if rules are restrictive.
-        const permissionError = new FirestorePermissionError({
-            path: productsRef.path,
-            operation: 'list', // getDocs is a 'list' operation
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        console.error("Error checking for existing unrecognized product: ", serverError);
-        throw serverError; // Re-throw to be caught by the server action
-    });
+    try {
+        const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
+        if (!querySnapshot.empty) {
+            // A pending review for this barcode already exists.
+            return {
+                success: true, // Not a failure, just a duplicate submission.
+                message: 'This product has already been submitted for review. Thank you!',
+            };
+        }
+
+        // No pending review found, so add the new product.
         const newProductData = {
             barcode,
             createdAt: serverTimestamp(),
             reviewed: false,
             submittedByEmail: email || '',
         };
-        addDoc(productsRef, newProductData)
-            .catch((serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: productsRef.path,
-                    operation: 'create',
-                    requestResourceData: newProductData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-                console.error("Error adding unrecognized product: ", serverError);
-                throw serverError; // Re-throw to be caught by the server action
-            });
 
-    } else {
-        console.log(`Barcode ${barcode} already submitted for review.`);
+        await addDoc(productsRef, newProductData);
+
+        return {
+            success: true,
+            message: "Thank you for your submission! We'll review it shortly.",
+        };
+    } catch (serverError: any) {
+        // This will catch permission errors on either getDocs or addDoc
+        const operation = serverError.message.includes('permission-denied') ? 'list' : 'create';
+        const permissionError = new FirestorePermissionError({
+            path: productsRef.path,
+            operation: operation,
+            requestResourceData: operation === 'create' ? { barcode, email } : undefined,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        
+        // Re-throw to be caught by the server action
+        throw serverError;
     }
 }
+
 
 export function createUserProfile(user: User) {
     const { firestore } = getFirebase();
