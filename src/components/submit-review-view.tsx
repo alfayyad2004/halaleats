@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, Send, Loader, RotateCcw } from 'lucide-react';
-import { submitReviewAction } from '@/app/actions/submit-unrecognized-product';
+import { submitReviewAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
 interface SubmitReviewViewProps {
