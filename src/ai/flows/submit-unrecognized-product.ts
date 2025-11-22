@@ -27,12 +27,16 @@ const SubmitUnrecognizedProductOutputSchema = z.object({
 export type SubmitUnrecognizedProductOutput = z.infer<typeof SubmitUnrecognizedProductOutputSchema>;
 
 
-// Initialize Firebase Admin SDK if not already initialized
+// Initialize Firebase Admin SDK if not already initialized.
+// This is a critical step for server-side flows.
 if (admin.apps.length === 0) {
     try {
+        // This will automatically use the service account credentials from the environment.
+        // It needs GOOGLE_APPLICATION_CREDENTIALS environment variable to be set.
         admin.initializeApp();
     } catch (e) {
         console.error('Firebase Admin initialization error', e);
+        // If initialization fails, the flow will throw an error when it tries to use Firestore.
     }
 }
 
@@ -47,6 +51,11 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
     const { barcode, submittedByEmail } = input;
     
     try {
+        // Ensure the admin app is initialized before trying to use its services.
+        if (admin.apps.length === 0) {
+            throw new Error("Firebase Admin SDK is not initialized.");
+        }
+        
         const firestore = admin.firestore();
         const productsRef = firestore.collection("unrecognizedProducts");
 
@@ -78,6 +87,7 @@ const submitUnrecognizedProductFlow = ai.defineFlow(
     } catch (error: any) {
         console.error("Error in submitUnrecognizedProductFlow:", error);
         // Do not expose detailed internal errors to the client.
+        // Throwing an error here will be caught by the calling server action.
         throw new Error("A server error occurred while submitting the product.");
     }
   }

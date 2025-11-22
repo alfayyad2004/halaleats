@@ -7,18 +7,7 @@ import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
 import { classifyProduct } from '@/firebase/firestore/mutations';
-import * as admin from 'firebase-admin';
-
-
-// Initialize Firebase Admin SDK if not already initialized.
-// This is safe to run on the server multiple times.
-if (admin.apps.length === 0) {
-    try {
-        admin.initializeApp();
-    } catch (e) {
-        console.error('Firebase Admin initialization error', e);
-    }
-}
+import { submitUnrecognizedProduct } from '@/ai/flows/submit-unrecognized-product';
 
 
 export type ScanResult = {
@@ -156,40 +145,23 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
     const { barcode, email } = validatedFields.data;
 
     try {
-        const firestore = admin.firestore();
-        const productsRef = firestore.collection('unrecognizedProducts');
-        
-        // Check for an existing, unreviewed product with the same barcode.
-        const q = productsRef.where('barcode', '==', barcode).where('reviewed', '==', false);
-        const querySnapshot = await q.get();
-
-        if (!querySnapshot.empty) {
-            return {
-                success: true,
-                message: 'This product has already been submitted for review. Thank you!',
-            };
-        }
-
-        // Add the new product for review.
-        await productsRef.add({
+        // Delegate the entire operation to the secure Genkit flow
+        const result = await submitUnrecognizedProduct({
             barcode,
-            submittedByEmail: email || '',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            reviewed: false,
+            submittedByEmail: email || undefined,
         });
-
-        return {
-            success: true,
-            message: "Thank you for your submission! We'll review it shortly.",
-        };
+        return result;
     } catch (error) {
-        console.error('Error in submitReviewAction:', error);
+        console.error('Error in submitReviewAction calling flow:', error);
+        // The flow itself will throw an error if something goes wrong internally.
+        // We catch it here to provide a generic, safe message to the user.
         return {
             success: false,
             message: 'A server error occurred while submitting the product. Please try again later.',
         };
     }
 }
+
 
 const ClassifyProductSchema = z.object({
     id: z.string().min(1),
