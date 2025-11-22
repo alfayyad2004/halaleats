@@ -7,16 +7,7 @@ import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
 import { z } from 'zod';
-import * as admin from 'firebase-admin';
-
-// This function ensures Firebase Admin is initialized and returns the Firestore instance.
-function getFirestoreAdmin() {
-  if (!admin.apps.length) {
-    // When deployed on App Hosting, initializeApp() discovers credentials automatically.
-    admin.initializeApp();
-  }
-  return admin.firestore();
-}
+import { classifyProduct, submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
 
 
 export type ScanResult = {
@@ -139,8 +130,6 @@ const SubmitReviewSchema = z.object({
 });
 
 export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
-    const firestore = getFirestoreAdmin();
-
     const validatedFields = SubmitReviewSchema.safeParse({
         barcode: formData.get('barcode'),
         email: formData.get('email'),
@@ -154,38 +143,19 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
     }
 
     const { barcode, email } = validatedFields.data;
-    const productsRef = firestore.collection("unrecognizedProducts");
 
     try {
-        const q = productsRef.where("barcode", "==", barcode);
-        const querySnapshot = await q.get();
-
-        if (!querySnapshot.empty) {
-            return {
-                success: true,
-                message: "Thank you for your submission! This product is already in our review queue.",
-            };
-        }
-
-        const newProductData = {
-            barcode,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            reviewed: false,
-            submittedByEmail: email || '',
-        };
-
-        await productsRef.add(newProductData);
-
+        await submitUnrecognizedProduct(barcode, email);
         return {
             success: true,
             message: "Thank you for your submission! We'll review it shortly.",
         };
 
     } catch (error: any) {
-        console.error("Error in submitReviewAction interacting with Firestore:", error);
+        console.error("Error in submitReviewAction:", error);
         return {
             success: false,
-            message: error.message || 'A server error occurred while writing to the database.',
+            message: error.message || 'A server error occurred while submitting for review.',
         };
     }
 }
@@ -198,8 +168,6 @@ const ClassifyProductSchema = z.object({
 });
 
 export async function classifyProductAction(prevState: any, formData: FormData) {
-    const firestore = getFirestoreAdmin();
-    
     const validatedFields = ClassifyProductSchema.safeParse({
         id: formData.get('id'),
         productName: formData.get('productName'),
@@ -214,14 +182,9 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
     }
 
     const { id, productName, ingredients } = validatedFields.data;
-    const productRef = firestore.collection('unrecognizedProducts').doc(id);
-
+    
     try {
-        await productRef.update({
-            productName,
-            ingredients,
-            reviewed: true,
-        });
+        await classifyProduct(id, productName, ingredients);
         return {
             success: true,
             message: 'Product has been classified successfully!',

@@ -1,5 +1,5 @@
 'use client';
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp, addDoc } from "firebase/firestore";
 import { getFirebase } from "..";
 import type { User } from "firebase/auth";
 import { errorEmitter } from '../error-emitter';
@@ -60,4 +60,34 @@ export function classifyProduct(
             // Re-throw the original server error so the calling function can handle it
             throw serverError;
         });
+}
+
+
+export async function submitUnrecognizedProduct(barcode: string, email?: string): Promise<void> {
+    const { firestore } = getFirebase();
+    if (!firestore) {
+        throw new Error("Firestore not initialized");
+    }
+
+    const productsRef = collection(firestore, 'unrecognizedProducts');
+    const q = query(productsRef, where("barcode", "==", barcode));
+
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        console.log("Product with this barcode already submitted.");
+        // We can just return successfully to give the user a consistent experience
+        return;
+    }
+    
+    const newProductData = {
+        barcode,
+        createdAt: serverTimestamp(),
+        reviewed: false,
+        submittedByEmail: email || '',
+    };
+    
+    // Use `addDoc` which will trigger a permission error if rules are not set correctly.
+    // The promise rejection will be caught by the server action.
+    await addDoc(productsRef, newProductData);
 }
