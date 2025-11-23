@@ -1,12 +1,10 @@
 'use client';
-import { doc, setDoc, updateDoc } from "firebase/firestore";
-import { getFirebase } from "..";
+import { doc, setDoc, updateDoc, Firestore } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
 
-export function createUserProfile(user: User) {
-    const { firestore } = getFirebase();
+export function createUserProfile(firestore: Firestore, user: User) {
     if (!firestore) {
         console.error("Firestore not initialized");
         return;
@@ -33,11 +31,11 @@ export function createUserProfile(user: User) {
 }
 
 export function classifyProduct(
+  firestore: Firestore,
   id: string,
   productName: string,
   ingredients: string
 ): Promise<void> {
-    const { firestore } = getFirebase();
     if (!firestore) {
         throw new Error("Firestore not initialized");
     }

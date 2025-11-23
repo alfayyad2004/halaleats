@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UnrecognizedProduct } from '@/lib/types';
 import { classifyProduct } from '@/firebase/firestore/mutations';
 import { Loader } from 'lucide-react';
+import { useFirestore } from '@/firebase';
 
 interface ClassifyProductDialogProps {
   product: UnrecognizedProduct;
@@ -43,6 +44,7 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,7 +56,7 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await classifyProduct(product.id, values.productName, values.ingredients);
+      await classifyProduct(firestore, product.id, values.productName, values.ingredients);
       toast({
         title: 'Product Classified',
         description: `${values.productName} has been updated.`,
