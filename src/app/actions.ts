@@ -1,22 +1,14 @@
 'use server';
 
-import * as admin from 'firebase-admin';
 import { z } from 'zod';
+import { getFirestoreAdmin } from '@/firebase/admin';
 import { CheckHalalStatusOutput, checkHalalStatus } from '@/ai/flows/check-halal-status';
 import { fetchIngredientList } from '@/ai/flows/fetch-ingredient-list';
 import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from-image';
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
+import * as admin from 'firebase-admin';
 
-// This function safely initializes the Firebase Admin SDK and returns the Firestore instance.
-// It ensures that initialization only happens once.
-function getFirestoreAdmin() {
-  if (!admin.apps.length) {
-    // When deployed on App Hosting, initializeApp() discovers credentials automatically.
-    admin.initializeApp();
-  }
-  return admin.firestore();
-}
 
 export type ScanResult = {
   productName: string;

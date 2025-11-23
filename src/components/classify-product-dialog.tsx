@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,9 +27,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { UnrecognizedProduct } from '@/lib/types';
-import { classifyProduct } from '@/firebase/firestore/mutations';
+import { classifyProductAction } from '@/app/actions';
 import { Loader } from 'lucide-react';
-import { useFirestore } from '@/firebase';
 
 interface ClassifyProductDialogProps {
   product: UnrecognizedProduct;
@@ -42,9 +41,9 @@ const formSchema = z.object({
 
 export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const firestore = useFirestore();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,28 +52,29 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    try {
-      await classifyProduct(firestore, product.id, values.productName, values.ingredients);
-      toast({
-        title: 'Product Classified',
-        description: `${values.productName} has been updated.`,
-      });
-      setOpen(false);
-    } catch (error: any) {
-      // The FirestorePermissionError will be thrown by the listener in dev,
-      // so we only need to show a generic toast here for production.
-      if (error.name !== 'FirestorePermissionError') {
-         toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Failed to classify product. You may not have the required permissions.',
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    const formData = new FormData();
+    formData.append('id', product.id);
+    formData.append('productName', values.productName);
+    formData.append('ingredients', values.ingredients);
+
+    startTransition(async () => {
+      const result = await classifyProductAction(null, formData);
+      if (result?.success) {
+        toast({
+          title: 'Product Classified',
+          description: `${values.productName} has been updated.`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result?.message || 'Failed to classify product.',
         });
       }
-    } finally {
-        setIsSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -126,12 +126,12 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={isSubmitting}>
+                <Button type="button" variant="ghost" disabled={isPending}>
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader className="mr-2 animate-spin" />}
+              <Button type="submit" disabled={isPending}>
+                {isPending && <Loader className="mr-2 animate-spin" />}
                 Save Changes
               </Button>
             </DialogFooter>
