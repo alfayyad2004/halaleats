@@ -44,38 +44,43 @@ service cloud.firestore {
     }
 
     function isAppAdmin() {
+      // Check if the user is authenticated and their user document has the 'admin' role.
       return isAppUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
 
     match /users/{userId} {
+      // Users can read their own profile.
       allow read: if isAppUser() && request.auth.uid == userId;
-      // Allow users to be created
-      allow create: if isAppUser();
-      // Only admins can change roles
-      allow update: if isAppAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
-      allow delete: if false;
+      // Allow users to be created with a default 'user' role.
+      allow create: if isAppUser() && request.resource.data.role == 'user';
+      // An admin can update a user's document, but cannot change the role directly with this rule.
+      // A separate, more secure mechanism (like a Cloud Function) should handle role changes.
+      allow update: if isAppAdmin() && !('role' in request.resource.data.diff(resource.data));
+      allow delete: if false; // Deleting users should be a privileged, server-side operation.
     }
 
     match /products/{productId} {
       allow get: if true;
       allow list: if true;
+      // Only admins can create, update, or delete products.
       allow create, update, delete: if isAppAdmin();
     }
 
     match /ingredients/{ingredientId} {
       allow get: if true;
       allow list: if true;
+      // Only admins can create, update, or delete ingredients.
       allow create, update, delete: if isAppAdmin();
     }
     
     match /unrecognizedProducts/{productId} {
-      // Allow admins to read/write all unrecognized products
-      allow read, write: if isAppAdmin();
-      
-      // Deny all client-side create, update, delete for security.
-      // These operations must go through a server action.
-      allow create, update, delete: if false;
+      // Allow anyone to read, which is useful for the client to check for duplicates before submitting.
+      allow read: if true;
+      // Allow anyone to create a new unrecognized product for review.
+      allow create: if true;
+      // Only admins can update (classify) or delete these submissions.
+      allow update, delete: if isAppAdmin();
     }
   }
 }

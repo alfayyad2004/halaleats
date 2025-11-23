@@ -28,6 +28,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { UnrecognizedProduct } from '@/lib/types';
 import { classifyProductAction } from '@/app/actions';
+import { classifyProduct } from '@/firebase/firestore/mutations';
+import { useFirestore } from '@/firebase';
 import { Loader } from 'lucide-react';
 
 interface ClassifyProductDialogProps {
@@ -43,6 +45,7 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,14 +55,22 @@ export function ClassifyProductDialog({ product }: ClassifyProductDialogProps) {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    const formData = new FormData();
-    formData.append('id', product.id);
-    formData.append('productName', values.productName);
-    formData.append('ingredients', values.ingredients);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Firestore not available. Please try again.',
+      });
+      return;
+    }
 
     startTransition(async () => {
-      const result = await classifyProductAction(null, formData);
+      const result = await classifyProduct(firestore, {
+        id: product.id,
+        ...values,
+      });
+
       if (result?.success) {
         toast({
           title: 'Product Classified',

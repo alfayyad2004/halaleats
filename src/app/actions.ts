@@ -1,13 +1,12 @@
 'use server';
 
 import { z } from 'zod';
-import { getFirestoreAdmin } from '@/lib/firebase/admin';
 import { CheckHalalStatusOutput, checkHalalStatus } from '@/ai/flows/check-halal-status';
 import { fetchIngredientList } from '@/ai/flows/fetch-ingredient-list';
 import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from-image';
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
-import { serverTimestamp, collection, query, where, getDocs, addDoc, doc, updateDoc } from 'firebase-admin/firestore';
+import { UnrecognizedProduct } from '@/lib/types';
 
 
 export type ScanResult = {
@@ -128,6 +127,7 @@ const ClassifyProductSchema = z.object({
   ingredients: z.string().min(1, 'Ingredients are required.'),
 });
 
+// This is now a passthrough to the client-side mutation
 export async function classifyProductAction(prevState: any, formData: FormData) {
   const validatedFields = ClassifyProductSchema.safeParse({
     id: formData.get('id'),
@@ -142,28 +142,12 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
     };
   }
   
-  try {
-    const firestore = getFirestoreAdmin();
-    const { id, productName, ingredients } = validatedFields.data;
-    const productRef = doc(firestore, 'unrecognizedProducts', id);
-
-    await updateDoc(productRef, {
-        productName,
-        ingredients,
-        reviewed: true,
-    });
-
-    return {
-      success: true,
-      message: 'Product has been classified successfully!',
-    };
-  } catch (e: any) {
-    console.error("Error in classifyProductAction:", e);
-    return {
-      success: false,
-      message: e.message || 'An error occurred while classifying the product.',
-    };
-  }
+  // This action now just validates and returns the data.
+  // The client will handle the Firestore call.
+  return {
+    success: true,
+    data: validatedFields.data,
+  };
 }
 
 const SubmitReviewSchema = z.object({
@@ -171,7 +155,8 @@ const SubmitReviewSchema = z.object({
     email: z.string().email().optional().or(z.literal('')),
 });
 
-export async function submitReviewAction(prevState: any, formData: FormData): Promise<{ success: boolean, message: string }> {
+// This is now a passthrough to the client-side mutation
+export async function submitReviewAction(prevState: any, formData: FormData) {
     const validatedFields = SubmitReviewSchema.safeParse({
         barcode: formData.get('barcode'),
         email: formData.get('email'),
@@ -184,38 +169,8 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
         };
     }
     
-    try {
-        const firestore = getFirestoreAdmin();
-        const { barcode, email } = validatedFields.data;
-        const productsRef = collection(firestore, 'unrecognizedProducts');
-        const q = query(productsRef, where('barcode', '==', barcode));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            return {
-                success: true,
-                message: 'This product has already been submitted for review. Thank you!',
-            };
-        }
-
-        const newProductData = {
-            barcode,
-            createdAt: serverTimestamp(),
-            reviewed: false,
-            submittedByEmail: email || '',
-        };
-
-        await addDoc(productsRef, newProductData);
-
-        return {
-            success: true,
-            message: "Thank you for your submission! We'll review it shortly.",
-        };
-    } catch (error: any) {
-        console.error("Error in submitReviewAction:", error);
-        return {
-            success: false,
-            message: error.message || "A server error occurred while submitting your request. Please try again later.",
-        };
-    }
+    return {
+      success: true,
+      data: validatedFields.data,
+    };
 }

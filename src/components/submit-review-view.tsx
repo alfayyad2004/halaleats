@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Mail, Send, Loader, RotateCcw } from 'lucide-react';
 import { submitReviewAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
 
 interface SubmitReviewViewProps {
   barcode: string;
@@ -16,30 +18,48 @@ interface SubmitReviewViewProps {
   onReset: () => void;
 }
 
-const initialState = { success: false, message: '' };
+const initialState: { success: boolean; message: string; data?: any } = { success: false, message: '' };
 
 export function SubmitReviewView({ barcode, onSubmitted, onReset }: SubmitReviewViewProps) {
   const [state, formAction] = useActionState(submitReviewAction, initialState);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   useEffect(() => {
-    if (state?.message) {
-      if (state.success) {
+    if (state?.success && state.data) {
+      if (!firestore) {
         toast({
-          title: 'Submission Successful',
-          description: state.message,
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'Database connection not ready.',
         });
-        // Delay navigation to allow user to see the toast
-        setTimeout(onSubmitted, 1500);
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Submission Failed',
-          description: state.message,
-        });
+        return;
       }
+      startTransition(async () => {
+        const result = await submitUnrecognizedProduct(firestore, state.data);
+        if (result.success) {
+            toast({
+              title: 'Submission Successful',
+              description: result.message,
+            });
+            setTimeout(onSubmitted, 1500);
+        } else {
+            toast({
+              variant: 'destructive',
+              title: 'Submission Failed',
+              description: result.message,
+            });
+        }
+      });
+    } else if (state && !state.success && state.message) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Input',
+            description: state.message,
+        });
     }
-  }, [state, onSubmitted, toast]);
+  }, [state, onSubmitted, toast, firestore]);
 
   return (
     <Card className="shadow-lg">
@@ -64,7 +84,7 @@ export function SubmitReviewView({ barcode, onSubmitted, onReset }: SubmitReview
             </div>
         </CardContent>
         <CardFooter className="flex-col gap-2">
-            <SubmitButton />
+            <SubmitButton isPending={isPending} />
             <Button type="button" variant="ghost" onClick={onReset} className="w-full">
                 <RotateCcw className="mr-2" /> Cancel
             </Button>
@@ -75,12 +95,13 @@ export function SubmitReviewView({ barcode, onSubmitted, onReset }: SubmitReview
 }
 
 
-function SubmitButton() {
+function SubmitButton({ isPending }: { isPending: boolean }) {
     const { pending } = useFormStatus();
+    const disabled = pending || isPending;
   
     return (
-      <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? (
+      <Button type="submit" className="w-full" size="lg" disabled={disabled}>
+        {disabled ? (
           <>
             <Loader className="mr-2 animate-spin" />
             Submitting...
