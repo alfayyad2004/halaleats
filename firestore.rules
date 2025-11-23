@@ -70,8 +70,12 @@ service cloud.firestore {
     }
     
     match /unrecognizedProducts/{productId} {
-      allow read, create: if true;
-      allow update, delete: if isAppAdmin();
+      // Allow admins to read/write all unrecognized products
+      allow read, write: if isAppAdmin();
+      
+      // Deny all client-side create, update, delete for security.
+      // These operations must go through a server action.
+      allow create, update, delete: if false;
     }
   }
 }

@@ -1,12 +1,13 @@
 'use server';
 
 import { z } from 'zod';
+import { getFirestoreAdmin } from '@/lib/firebase/admin';
 import { CheckHalalStatusOutput, checkHalalStatus } from '@/ai/flows/check-halal-status';
 import { fetchIngredientList } from '@/ai/flows/fetch-ingredient-list';
 import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from-image';
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
-import { classifyProduct, submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
+import { serverTimestamp, collection, query, where, getDocs, addDoc, doc, updateDoc } from 'firebase-admin/firestore';
 
 
 export type ScanResult = {
@@ -142,7 +143,16 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
   }
   
   try {
-    await classifyProduct(validatedFields.data);
+    const firestore = getFirestoreAdmin();
+    const { id, productName, ingredients } = validatedFields.data;
+    const productRef = doc(firestore, 'unrecognizedProducts', id);
+
+    await updateDoc(productRef, {
+        productName,
+        ingredients,
+        reviewed: true,
+    });
+
     return {
       success: true,
       message: 'Product has been classified successfully!',
@@ -175,7 +185,28 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
     }
     
     try {
-        await submitUnrecognizedProduct(validatedFields.data);
+        const firestore = getFirestoreAdmin();
+        const { barcode, email } = validatedFields.data;
+        const productsRef = collection(firestore, 'unrecognizedProducts');
+        const q = query(productsRef, where('barcode', '==', barcode));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            return {
+                success: true,
+                message: 'This product has already been submitted for review. Thank you!',
+            };
+        }
+
+        const newProductData = {
+            barcode,
+            createdAt: serverTimestamp(),
+            reviewed: false,
+            submittedByEmail: email || '',
+        };
+
+        await addDoc(productsRef, newProductData);
+
         return {
             success: true,
             message: "Thank you for your submission! We'll review it shortly.",
@@ -184,7 +215,7 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
         console.error("Error in submitReviewAction:", error);
         return {
             success: false,
-            message: "A server error occurred while submitting your request. Please try again later.",
+            message: error.message || "A server error occurred while submitting your request. Please try again later.",
         };
     }
 }
