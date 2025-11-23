@@ -38,52 +38,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    //============================================================
     // Helper Functions
-    //============================================================
+    function isAppUser() {
+      return request.auth != null;
+    }
 
-    //============================================================
-    // Collection Rules
-    //============================================================
+    function isAppAdmin() {
+      return isAppUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
 
-    /**
-     * @description Controls access to the public collection of products. All users can
-     *   read product information, but no one can modify it.
-     * @path /products/{productId}
-     * @allow Anyone, including unauthenticated users, can read a specific product. (get)
-     * @deny An authenticated user attempts to create a new product. (create)
-     * @principle Public Read, Secure Write. This rule makes the data publicly accessible
-     *   while completely locking down write operations until a secure ownership model is defined
-     *   in the application's data schema.
-     */
+
+    match /users/{userId} {
+      allow read: if isAppUser() && request.auth.uid == userId;
+      // Allow users to be created
+      allow create: if isAppUser();
+      // Only admins can change roles
+      allow update: if isAppAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+      allow delete: if false;
+    }
+
     match /products/{productId} {
       allow get: if true;
       allow list: if true;
-
-      // CRITICAL: Cannot implement owner-only writes. The 'Product' entity is missing an 'ownerId' or 'authorId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if isAppAdmin();
     }
 
-    /**
-     * @description Controls access to the public collection of ingredients. All users can
-     *   read ingredient information, but no one can modify it.
-     * @path /ingredients/{ingredientId}
-     * @allow Anyone, including unauthenticated users, can list all ingredients. (list)
-     * @deny An authenticated user attempts to update an existing ingredient. (update)
-     * @principle Public Read, Secure Write. This rule makes the data publicly accessible
-     *   while completely locking down write operations until a secure ownership model is defined
-     *   in the application's data schema.
-     */
     match /ingredients/{ingredientId} {
       allow get: if true;
       allow list: if true;
-
-      // CRITICAL: Cannot implement owner-only writes. The 'Ingredient' entity is missing an 'ownerId' or 'authorId' field.
-      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create, update, delete: if isAppAdmin();
+    }
+    
+    match /unrecognizedProducts/{productId} {
+      allow read, create: if true;
+      allow update, delete: if isAppAdmin();
     }
   }
 }

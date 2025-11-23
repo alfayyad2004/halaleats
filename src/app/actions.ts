@@ -1,13 +1,12 @@
 'use server';
 
 import { z } from 'zod';
-import { getFirestoreAdmin } from '@/firebase/admin';
 import { CheckHalalStatusOutput, checkHalalStatus } from '@/ai/flows/check-halal-status';
 import { fetchIngredientList } from '@/ai/flows/fetch-ingredient-list';
 import { extractIngredientsFromImage } from '@/ai/flows/extract-ingredients-from-image';
 import { getProductName } from '@/services/product-api';
 import { BarcodeSchema } from '@/app/schema';
-import * as admin from 'firebase-admin';
+import { classifyProduct, submitUnrecognizedProduct } from '@/firebase/firestore/mutations';
 
 
 export type ScanResult = {
@@ -141,18 +140,9 @@ export async function classifyProductAction(prevState: any, formData: FormData) 
       message: 'Invalid data provided.',
     };
   }
-
-  const { id, productName, ingredients } = validatedFields.data;
-
+  
   try {
-    const firestore = getFirestoreAdmin();
-    const productRef = firestore.collection('unrecognizedProducts').doc(id);
-    await productRef.update({
-      productName,
-      ingredients,
-      reviewed: true,
-    });
-
+    await classifyProduct(validatedFields.data);
     return {
       success: true,
       message: 'Product has been classified successfully!',
@@ -185,37 +175,13 @@ export async function submitReviewAction(prevState: any, formData: FormData): Pr
     }
     
     try {
-        const firestore = getFirestoreAdmin();
-        const { barcode, email } = validatedFields.data;
-        const productsRef = firestore.collection("unrecognizedProducts");
-
-        // Query to check for an existing product with the same barcode.
-        const q = productsRef.where("barcode", "==", barcode);
-        const querySnapshot = await q.get();
-
-        if (!querySnapshot.empty) {
-            return {
-                success: true,
-                message: "Thank you for your submission! This product is already in our review queue.",
-            };
-        }
-
-        // No pending review found, so add the new product.
-        const newProductData = {
-            barcode,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            reviewed: false,
-            submittedByEmail: email || '',
-        };
-
-        await productsRef.add(newProductData);
-
+        await submitUnrecognizedProduct(validatedFields.data);
         return {
             success: true,
             message: "Thank you for your submission! We'll review it shortly.",
         };
     } catch (error: any) {
-        console.error("Error in submitReviewAction interacting with Firestore:", error);
+        console.error("Error in submitReviewAction:", error);
         return {
             success: false,
             message: "A server error occurred while submitting your request. Please try again later.",
