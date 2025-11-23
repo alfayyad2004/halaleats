@@ -1,100 +1,110 @@
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's profile information.",
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
       "type": "object",
+      "description": "Represents a product identified by its barcode and associated information like ingredients and halal status.",
       "properties": {
-        "uid": {
+        "id": {
           "type": "string",
-          "description": "The user's unique ID."
+          "description": "Unique identifier for the Product entity."
         },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "photoURL": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of the user's profile picture."
-        },
-        "role": {
-          "type": "string",
-          "enum": [
-            "admin",
-            "user"
-          ],
-          "description": "The user's role."
-        }
-      },
-      "required": [
-        "uid",
-        "email",
-        "role"
-      ]
-    },
-    "UnrecognizedProduct": {
-      "title": "Unrecognized Product",
-      "description": "Represents a product that was scanned but not found in the database.",
-      "type": "object",
-      "properties": {
         "barcode": {
           "type": "string",
-          "description": "The barcode of the unrecognized product."
+          "description": "The barcode of the product."
         },
-        "createdAt": {
+        "name": {
           "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the product was first scanned."
+          "description": "The name of the product."
         },
-        "reviewed": {
-          "type": "boolean",
-          "description": "Flag indicating if the product has been reviewed by an admin."
+        "ingredientIds": {
+          "type": "array",
+          "description": "References to Ingredients. (Relationship: Product 1:N Ingredient)",
+          "items": {
+            "type": "string"
+          }
         },
-        "productName": {
+        "halalStatus": {
           "type": "string",
-          "description": "The corrected product name provided by an admin."
-        },
-        "ingredients": {
-          "type": "string",
-          "description": "The corrected ingredients list provided by an admin."
-        },
-        "submittedByEmail": {
-          "type": "string",
-          "format": "email",
-          "description": "The email of the user who submitted the product."
+          "description": "The halal status of the product (Halal/Not Halal/Possible Concerns)."
         }
       },
       "required": [
+        "id",
         "barcode",
-        "createdAt",
-        "reviewed",
-        "submittedByEmail"
+        "name",
+        "ingredientIds",
+        "halalStatus"
+      ]
+    },
+    "Ingredient": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ingredient",
+      "type": "object",
+      "description": "Represents an ingredient of a product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Ingredient entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the ingredient."
+        },
+        "isHalal": {
+          "type": "boolean",
+          "description": "Indicates whether the ingredient is halal or not."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "isHalal"
       ]
     }
   },
   "auth": {
     "providers": [
-      "google.com"
+      "password",
+      "anonymous"
     ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/UserProfile"
+    "structure": [
+      {
+        "path": "products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product information, including barcode, name, ingredient IDs, and halal status.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier of the product."
+            }
+          ]
+        }
       },
-      "description": "Stores user profile information."
-    },
-    "/unrecognizedProducts/{productId}": {
-      "schema": {
-        "$ref": "#/entities/UnrecognizedProduct"
-      },
-      "description": "Collection of products that were not found during a scan and require admin review."
-    }
+      {
+        "path": "ingredients/{ingredientId}",
+        "definition": {
+          "entityName": "Ingredient",
+          "schema": {
+            "$ref": "#/backend/entities/Ingredient"
+          },
+          "description": "Stores ingredient information, including name and halal status.",
+          "params": [
+            {
+              "name": "ingredientId",
+              "description": "The unique identifier of the ingredient."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure prioritizes authorization independence and ease of security rule implementation. It leverages path-based ownership for user-specific data and a dedicated collection for product and ingredient data, avoiding the need for complex `get()` calls in security rules. This design facilitates atomic operations and simplifies debugging.\n\nThe structure achieves Authorization Independence by not relying on hierarchical data dependencies. Product data and ingredient data are stored in top level collections and does not require fetching parent document data for authorization.\n\nThe structure supports required QAPs by segregating data based on type (products and ingredients). This segregation, along with explicit ownership, enables secure `list` operations. No filtering is done in the security rules, enabling the required QAPs"
   }
 }
